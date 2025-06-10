@@ -67,6 +67,7 @@ struct [raypayload] RayPayload
     //float4 color;
     float4 color : write(caller, closesthit, miss) : read(caller);
 };
+    
 
 // Retrieve hit world position.
 float3 HitWorldPosition()
@@ -109,6 +110,7 @@ float4 CalculateDiffuseLighting(float3 hitPosition, float3 normal)
 
     return g_cubeCB.albedo * g_sceneCB.lightDiffuseColor * fNDotL;
 }
+    
 
 [shader("raygeneration")]
 void MyRaygenShader()
@@ -130,7 +132,7 @@ void MyRaygenShader()
     ray.TMax = 10000.0;
     RayPayload payload = { float4(0, 0, 0, 0) };
     float4 color = float4(1,1,1,1);
-        
+           
     HitObject hit = HitObject::TraceRay(Scene, RAY_FLAG_NONE, ~0, 0, 1, 0, ray, payload);
     dx::MaybeReorderThread(hit, 0, 0);
         
@@ -179,6 +181,5 @@ void MyMissShader(inout RayPayload payload)
     float4 background = float4(0.0f, 0.2f, 0.4f, 1.0f);
     payload.color = background;
 }
-   
 
 #endif // RAYTRACING_HLSL

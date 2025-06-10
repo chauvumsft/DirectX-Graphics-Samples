@@ -17,6 +17,9 @@
 #include <atlbase.h>
 #include <vector>
 
+extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 717; }
+extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = u8".\\D3D12\\"; }
+
 using namespace std;
 using namespace DX;
 
@@ -177,12 +180,6 @@ void D3D12RaytracingSimpleLighting::OnInit()
     InitializeScene();
 
     CreateDeviceDependentResources();
-
-    D3D12_FEATURE_DATA_SHADER_MODEL SM;
-    SM.HighestShaderModel = D3D_SHADER_MODEL_6_9;
-    m_dxrDevice->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &SM, sizeof(SM));
-    ThrowIfFalse(SM.HighestShaderModel >= D3D_SHADER_MODEL_6_9,
-        L"ERROR: Device doesn't support Shader Model 6.9.\n\n");
 
     CreateWindowSizeDependentResources();
 }
@@ -386,6 +383,12 @@ void D3D12RaytracingSimpleLighting::CreateLocalRootSignatureSubobjects(CD3DX12_S
 // with all configuration options resolved, such as local signatures and other state.
 void D3D12RaytracingSimpleLighting::CreateRaytracingPipelineStateObject()
 {
+    D3D12_FEATURE_DATA_SHADER_MODEL SM;
+    SM.HighestShaderModel = D3D_SHADER_MODEL_6_9;
+    m_dxrDevice->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &SM, sizeof(SM));
+    ThrowIfFalse(SM.HighestShaderModel >= D3D_SHADER_MODEL_6_9,
+        L"ERROR: Device doesn't support Shader Model 6.9.\n\n");
+
     // Create 7 subobjects that combine into a RTPSO:
     // Subobjects need to be associated with DXIL exports (i.e. shaders) either by way of default or explicit associations.
     // Default association applies to every exported shader entrypoint that doesn't have any of the same type of subobject associated with it.
@@ -513,31 +516,61 @@ void D3D12RaytracingSimpleLighting::BuildGeometry()
 {
     auto device = m_deviceResources->GetD3DDevice();
 
-    // Cube indices.
-
+     // Cube indices.
     Index indices[] =
     {
-        0, 1, 2,  // Face 1
-        0, 3, 1,  // Face 2
-        0, 2, 3,  // Face 3
-        1, 3, 2   // Face 4 (base)
-    };
+        3,1,0,
+        2,1,3,
 
+        6,4,5,
+        7,4,6,
+
+        11,9,8,
+        10,9,11,
+
+        14,12,13,
+        15,12,14,
+
+        19,17,16,
+        18,17,19,
+
+        22,20,21,
+        23,20,22
+    };
 
     // Cube vertices positions and corresponding triangle normals.
-
-
     Vertex vertices[] =
     {
-        { XMFLOAT3(1.0f,  1.0f,  1.0f), XMFLOAT3(0.577f,  0.577f,  0.577f) }, // Vertex 0
-        { XMFLOAT3(-1.0f, -1.0f,  1.0f), XMFLOAT3(-0.577f, -0.577f,  0.577f) }, // Vertex 1
-        { XMFLOAT3(-1.0f,  1.0f, -1.0f), XMFLOAT3(-0.577f,  0.577f, -0.577f) }, // Vertex 2
-        { XMFLOAT3(1.0f, -1.0f, -1.0f), XMFLOAT3(0.577f, -0.577f, -0.577f) }  // Vertex 3
+        { XMFLOAT3(-1.0f, 1.0f, -1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f) },
+        { XMFLOAT3(1.0f, 1.0f, -1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f) },
+        { XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f) },
+        { XMFLOAT3(-1.0f, 1.0f, 1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f) },
+
+        { XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT3(0.0f, -1.0f, 0.0f) },
+        { XMFLOAT3(1.0f, -1.0f, -1.0f), XMFLOAT3(0.0f, -1.0f, 0.0f) },
+        { XMFLOAT3(1.0f, -1.0f, 1.0f), XMFLOAT3(0.0f, -1.0f, 0.0f) },
+        { XMFLOAT3(-1.0f, -1.0f, 1.0f), XMFLOAT3(0.0f, -1.0f, 0.0f) },
+
+        { XMFLOAT3(-1.0f, -1.0f, 1.0f), XMFLOAT3(-1.0f, 0.0f, 0.0f) },
+        { XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT3(-1.0f, 0.0f, 0.0f) },
+        { XMFLOAT3(-1.0f, 1.0f, -1.0f), XMFLOAT3(-1.0f, 0.0f, 0.0f) },
+        { XMFLOAT3(-1.0f, 1.0f, 1.0f), XMFLOAT3(-1.0f, 0.0f, 0.0f) },
+
+        { XMFLOAT3(1.0f, -1.0f, 1.0f), XMFLOAT3(1.0f, 0.0f, 0.0f) },
+        { XMFLOAT3(1.0f, -1.0f, -1.0f), XMFLOAT3(1.0f, 0.0f, 0.0f) },
+        { XMFLOAT3(1.0f, 1.0f, -1.0f), XMFLOAT3(1.0f, 0.0f, 0.0f) },
+        { XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT3(1.0f, 0.0f, 0.0f) },
+
+        { XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT3(0.0f, 0.0f, -1.0f) },
+        { XMFLOAT3(1.0f, -1.0f, -1.0f), XMFLOAT3(0.0f, 0.0f, -1.0f) },
+        { XMFLOAT3(1.0f, 1.0f, -1.0f), XMFLOAT3(0.0f, 0.0f, -1.0f) },
+        { XMFLOAT3(-1.0f, 1.0f, -1.0f), XMFLOAT3(0.0f, 0.0f, -1.0f) },
+
+        { XMFLOAT3(-1.0f, -1.0f, 1.0f), XMFLOAT3(0.0f, 0.0f, 1.0f) },
+        { XMFLOAT3(1.0f, -1.0f, 1.0f), XMFLOAT3(0.0f, 0.0f, 1.0f) },
+        { XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT3(0.0f, 0.0f, 1.0f) },
+        { XMFLOAT3(-1.0f, 1.0f, 1.0f), XMFLOAT3(0.0f, 0.0f, 1.0f) },
     };
-
-
-
-
 
     AllocateUploadBuffer(device, indices, sizeof(indices), &m_indexBuffer.resource);
     AllocateUploadBuffer(device, vertices, sizeof(vertices), &m_vertexBuffer.resource);
