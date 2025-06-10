@@ -434,17 +434,17 @@ void D3D12RaytracingSimpleLighting::CreateRaytracingPipelineStateObject()
     hitGroup->SetHitGroupType(D3D12_HIT_GROUP_TYPE_TRIANGLES);
     
     // Shader config
-    // Defines the maximum sizes in bytes for the ray payload and attribute structure.
-    //auto shaderConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>();
-    //UINT payloadSize = sizeof(XMFLOAT4);    // float4 pixelColor
-    //UINT attributeSize = sizeof(XMFLOAT2);  // float2 barycentrics
-    //shaderConfig->Config(payloadSize, attributeSize);
-
+   //  Defines the maximum sizes in bytes for the ray payload and attribute structure.
     auto shaderConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>();
-    //UINT payloadSize = 4 * sizeof(float) + sizeof(UINT);   // float4 color + uint iterations
-    UINT payloadSize = 4 * sizeof(float);
-    UINT attributeSize = 2 * sizeof(float); // float2 barycentrics
+    UINT payloadSize = sizeof(XMFLOAT4);    // float4 pixelColor
+    UINT attributeSize = sizeof(XMFLOAT2);  // float2 barycentrics
     shaderConfig->Config(payloadSize, attributeSize);
+
+    //auto shaderConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>();
+    ////UINT payloadSize = 4 * sizeof(float) + sizeof(UINT);   // float4 color + uint iterations
+    //UINT payloadSize = 4 * sizeof(float);
+    //UINT attributeSize = 2 * sizeof(float); // float2 barycentrics
+    //shaderConfig->Config(payloadSize, attributeSize);
 
     // Local root signature and shader association
     // This is a root signature that enables a shader to have unique arguments that come from shader tables.
