@@ -207,13 +207,13 @@ void D3D12RaytracingSimpleLighting::InitializeScene()
     {
         m_cubeCB.albedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
         m_secondCubeCB.albedo = XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f);
-        m_complexShapeCB.albedo = XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f);
+        m_complexShapeCB.albedo = XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f);
     }
 
     // Setup camera.
     {
         // Initialize the view and projection inverse matrices.
-        m_eye = { 0.0f, 2.0f, -10.0f, 1.0f };
+        m_eye = { 0.0f, 8.0f, -14.0f, 1.0f };
         m_at = { 0.0f, 0.0f, 0.0f, 1.0f };
         XMVECTOR right = { 1.0f, 0.0f, 0.0f, 0.0f };
 
@@ -382,6 +382,7 @@ void D3D12RaytracingSimpleLighting::CreateLocalRootSignatureSubobjects(CD3DX12_S
         auto rootSignatureAssociation = raytracingPipeline->CreateSubobject<CD3DX12_SUBOBJECT_TO_EXPORTS_ASSOCIATION_SUBOBJECT>();
         rootSignatureAssociation->SetSubobjectToAssociate(*localRootSignature);
         rootSignatureAssociation->AddExport(c_hitGroupName);
+        rootSignatureAssociation->AddExport(c_raygenShaderName);
     }
 }
 
@@ -443,7 +444,7 @@ void D3D12RaytracingSimpleLighting::CreateRaytracingPipelineStateObject()
     // Shader config
    //  Defines the maximum sizes in bytes for the ray payload and attribute structure.
     auto shaderConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>();
-    UINT payloadSize = sizeof(XMFLOAT4);    // float4 pixelColor
+    UINT payloadSize = sizeof(XMFLOAT4) * 2;    // float4 pixelColor + albedo
     UINT attributeSize = sizeof(XMFLOAT2);  // float2 barycentrics
     shaderConfig->Config(payloadSize, attributeSize);
 
@@ -596,7 +597,7 @@ void D3D12RaytracingSimpleLighting::BuildComplexGeometry()
 {
     auto device = m_deviceResources->GetD3DDevice();
     // Torus knot parameters
-    const int tubularSegments = 64;   // Number of segments around tube
+    const int tubularSegments = 500000;
     const int radialSegments = 16;    // Number of segments around radius
     const float p = 2.0f;             // Number of times around the circle
     const float q = 3.0f;             // Number of times through the circle
@@ -766,20 +767,34 @@ void D3D12RaytracingSimpleLighting::BuildAccelerationStructures()
     // Create an instance desc for the bottom-level acceleration structure.
     ComPtr<ID3D12Resource> instanceDescsResource;   
     std::vector<D3D12_RAYTRACING_INSTANCE_DESC> instanceDesc;
+    int cubesPerRow = 5;
+    float cubeSpacing = 4.0f;
     for (int i = 0; i < 10; ++i) {
         D3D12_RAYTRACING_INSTANCE_DESC desc = {};
         desc.Transform[0][0] = desc.Transform[1][1] = desc.Transform[2][2] = 1.0f;
-        desc.Transform[0][3] = static_cast<float>(i) * 3.0f; // Spread cubes along X
+        // Spread cubes in X and Z, keep Y at 0
+        int row = i / cubesPerRow;
+        int col = i % cubesPerRow;
+        desc.Transform[0][3] = (col - (cubesPerRow / 2)) * cubeSpacing;
+        desc.Transform[1][3] = 0.0f;
+        desc.Transform[2][3] = (row - 0.5f) * cubeSpacing;
         desc.InstanceMask = 1;
         desc.AccelerationStructure = m_bottomLevelAccelerationStructureCube->GetGPUVirtualAddress();
         desc.InstanceID = i;
         instanceDesc.push_back(desc);
     }
 
+    float complexShapeZ = -15.0f;
+    float complexShapeSpacing = 8.0f;
     for (int i = 0; i < 20; ++i) {
         D3D12_RAYTRACING_INSTANCE_DESC desc = {};
         desc.Transform[0][0] = desc.Transform[1][1] = desc.Transform[2][2] = 1.0f;
-        desc.Transform[0][3] = -5.0f + i * 5.0f; // Place complex shapes at different X
+        // Spread shapes 
+        int row = i / cubesPerRow;
+        int col = i % cubesPerRow;
+        desc.Transform[0][3] = (col - (cubesPerRow / 2)) * cubeSpacing;
+        desc.Transform[1][3] = 0.0f;
+        desc.Transform[2][3]=complexShapeZ + (row - 0.5f) * cubeSpacing;
         desc.InstanceMask = 1;
         desc.AccelerationStructure = m_bottomLevelAccelerationStructureComplex->GetGPUVirtualAddress();
         desc.InstanceID = 10 + i;
@@ -876,10 +891,15 @@ void D3D12RaytracingSimpleLighting::BuildShaderTables()
 
     // Ray gen shader table
     {
+        struct RootArguments {
+            CubeConstantBuffer cb;
+        } rootArguments;
+        rootArguments.cb = m_cubeCB;
+
         UINT numShaderRecords = 1;
-        UINT shaderRecordSize = shaderIdentifierSize;
+        UINT shaderRecordSize = shaderIdentifierSize + sizeof(rootArguments);
         ShaderTable rayGenShaderTable(device, numShaderRecords, shaderRecordSize, L"RayGenShaderTable");
-        rayGenShaderTable.push_back(ShaderRecord(rayGenShaderIdentifier, shaderIdentifierSize));
+        rayGenShaderTable.push_back(ShaderRecord(rayGenShaderIdentifier, shaderIdentifierSize, &rootArguments, sizeof(rootArguments)));
         m_rayGenShaderTable = rayGenShaderTable.GetResource();
     }
 
@@ -903,17 +923,18 @@ void D3D12RaytracingSimpleLighting::BuildShaderTables()
         UINT shaderRecordSize = shaderIdentifierSize + sizeof(rootArguments);
         ShaderTable hitGroupShaderTable(device, numShaderRecords, shaderRecordSize, L"HitGroupShaderTable");
 
+
         RootArguments rootArguments1;
         rootArguments1.cb = m_cubeCB;
         hitGroupShaderTable.push_back(ShaderRecord(hitGroupShaderIdentifier, shaderIdentifierSize, &rootArguments1, sizeof(rootArguments1)));
 
-        RootArguments rootArguments2;
+       /* RootArguments rootArguments2;
         rootArguments2.cb = m_secondCubeCB;
-        hitGroupShaderTable.push_back(ShaderRecord(hitGroupShaderIdentifier, shaderIdentifierSize, &rootArguments2, sizeof(rootArguments2)));
+        hitGroupShaderTable.push_back(ShaderRecord(hitGroupShaderIdentifier, shaderIdentifierSize, &rootArguments2, sizeof(rootArguments2)));*/
 
-        RootArguments rootArguments3;
-        rootArguments3.cb = m_complexShapeCB;
-        hitGroupShaderTable.push_back(ShaderRecord(hitGroupShaderIdentifier, shaderIdentifierSize, &rootArguments3, sizeof(rootArguments3)));
+        RootArguments rootArguments2;
+        rootArguments2.cb = m_complexShapeCB;
+        hitGroupShaderTable.push_back(ShaderRecord(hitGroupShaderIdentifier, shaderIdentifierSize, &rootArguments2, sizeof(rootArguments2)));
         m_hitGroupShaderTable = hitGroupShaderTable.GetResource();
     }
 }

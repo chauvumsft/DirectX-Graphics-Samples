@@ -136,17 +136,21 @@ void MyRaygenShader()
     RayPayload payload = { float4(0, 0, 0, 0) };
     float4 color = float4(1,1,1,1);
         
-//TraceRay(Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 1, 0, ray, payload);
-           
-        HitObject hit = HitObject::TraceRay(Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 1, 0, ray, payload);
-    dx::MaybeReorderThread(hit, 0, 0);
+    // Create  a coherence hint based on the material's albedo color.
+    float4 albedo = g_cubeCB.albedo;
         
-    HitObject::Invoke(hit, payload);
-    color = payload.color;
+    bool isBrightMaterial = albedo.r > 0.5f && albedo.g > 0.5f && albedo.b > 0.5f;
+    uint coherenceHint = isBrightMaterial ? 0 : 1;
+        
+    TraceRay(Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 1, 0, ray, payload);
+    //HitObject hit = HitObject::TraceRay(Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 1, 0, ray, payload);
+        
+    //  dx::MaybeReorderThread(hit, 0, 0);
+    //HitObject::Invoke(hit, payload);
 
     // Write the raytraced color to the output texture.
-        RenderTarget[DispatchRaysIndex().xy] = payload.color;
-    }
+    RenderTarget[DispatchRaysIndex().xy] = payload.color;
+}
 
 [shader("closesthit")]
 void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
