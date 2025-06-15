@@ -143,11 +143,11 @@ void MyRaygenShader()
     uint coherenceHint = isBrightMaterial ? 0 : 1;
        
     // TraceRay experiments: 
-    //TraceRay(Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 1, 0, ray, payload);
-    HitObject hit = HitObject::TraceRay(Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 1, 0, ray, payload);
+    TraceRay(Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 1, 0, ray, payload);
+    //HitObject hit = HitObject::TraceRay(Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 1, 0, ray, payload);
         
-    dx::MaybeReorderThread(hit);
-    HitObject::Invoke(hit, payload);
+    //dx::MaybeReorderThread(hit);
+    //HitObject::Invoke(hit, payload);
         
     color = payload.color;
 
