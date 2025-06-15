@@ -141,15 +141,18 @@ void MyRaygenShader()
         
     bool isBrightMaterial = albedo.r > 0.5f && albedo.g > 0.5f && albedo.b > 0.5f;
     uint coherenceHint = isBrightMaterial ? 0 : 1;
+       
+    // TraceRay experiments: 
+    //TraceRay(Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 1, 0, ray, payload);
+    HitObject hit = HitObject::TraceRay(Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 1, 0, ray, payload);
         
-    TraceRay(Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 1, 0, ray, payload);
-    //HitObject hit = HitObject::TraceRay(Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 1, 0, ray, payload);
+    dx::MaybeReorderThread(hit);
+    HitObject::Invoke(hit, payload);
         
-    //  dx::MaybeReorderThread(hit, 0, 0);
-    //HitObject::Invoke(hit, payload);
+    color = payload.color;
 
     // Write the raytraced color to the output texture.
-    RenderTarget[DispatchRaysIndex().xy] = payload.color;
+    RenderTarget[DispatchRaysIndex().xy] = color;
 }
 
 [shader("closesthit")]
@@ -181,8 +184,8 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
     float4 diffuseColor = CalculateDiffuseLighting(hitPosition, triangleNormal);
     float4 color = g_sceneCB.lightAmbientColor + diffuseColor;
 
-    payload.color = color;
-}
+        payload.color = color;
+    }
 
 [shader("miss")]
 void MyMissShader(inout RayPayload payload)

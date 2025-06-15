@@ -1,4 +1,4 @@
-//*********************************************************
+﻿//*********************************************************
 //
 // Copyright (c) Microsoft. All rights reserved.
 // This code is licensed under the MIT License (MIT).
@@ -166,7 +166,7 @@ void D3D12RaytracingSimpleLighting::OnInit()
         // Since the sample requires build 1809 (RS5) or higher, we don't need to handle non-tearing cases.
         DeviceResources::c_RequireTearingSupport,
         m_adapterIDoverride
-        );
+    );
     m_deviceResources->RegisterDeviceNotify(this);
     m_deviceResources->SetWindow(Win32Application::GetHwnd(), m_width, m_height);
     m_deviceResources->InitializeDXGIAdapter();
@@ -204,16 +204,16 @@ void D3D12RaytracingSimpleLighting::InitializeScene()
     auto frameIndex = m_deviceResources->GetCurrentFrameIndex();
 
     // Setup materials.
-    {
-        m_cubeCB.albedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-        m_secondCubeCB.albedo = XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f);
-        m_complexShapeCB.albedo = XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f);
-    }
+    //{
+    //    m_cubeCB.albedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+    //    m_secondCubeCB.albedo = XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f);
+    //    m_complexShapeCB.albedo = XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f);
+    //}
 
     // Setup camera.
     {
         // Initialize the view and projection inverse matrices.
-        m_eye = { 0.0f, 8.0f, -14.0f, 1.0f };
+        m_eye = { 0.0f, 6.0f, -4.0f, 1.0f };
         m_at = { 0.0f, 0.0f, 0.0f, 1.0f };
         XMVECTOR right = { 1.0f, 0.0f, 0.0f, 0.0f };
 
@@ -224,7 +224,7 @@ void D3D12RaytracingSimpleLighting::InitializeScene()
         XMMATRIX rotate = XMMatrixRotationY(XMConvertToRadians(45.0f));
         m_eye = XMVector3Transform(m_eye, rotate);
         m_up = XMVector3Transform(m_up, rotate);
-        
+
         UpdateCameraMatrices();
     }
 
@@ -235,7 +235,7 @@ void D3D12RaytracingSimpleLighting::InitializeScene()
         XMFLOAT4 lightAmbientColor;
         XMFLOAT4 lightDiffuseColor;
 
-        lightPosition = XMFLOAT4(0.0f, 1.8f, -3.0f, 0.0f);
+        lightPosition = XMFLOAT4(0.0f, 5.8f, -3.0f, 0.0f);
         m_sceneCB[frameIndex].lightPosition = XMLoadFloat4(&lightPosition);
 
         lightAmbientColor = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
@@ -257,7 +257,7 @@ void D3D12RaytracingSimpleLighting::CreateConstantBuffers()
 {
     auto device = m_deviceResources->GetD3DDevice();
     auto frameCount = m_deviceResources->GetBackBufferCount();
-    
+
     // Create the constant buffer memory and map the CPU and GPU addresses
     const D3D12_HEAP_PROPERTIES uploadHeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 
@@ -300,7 +300,7 @@ void D3D12RaytracingSimpleLighting::CreateDeviceDependentResources()
     BuildGeometry();
 
     // Build complex geometry
-	BuildComplexGeometry();
+    BuildComplexGeometry();
 
     // Build raytracing acceleration structures from the generated geometry.
     BuildAccelerationStructures();
@@ -432,7 +432,7 @@ void D3D12RaytracingSimpleLighting::CreateRaytracingPipelineStateObject()
         lib->DefineExport(c_closestHitShaderName);
         lib->DefineExport(c_missShaderName);
     }
-    
+
     // Triangle hit group
     // A hit group specifies closest hit, any hit and intersection shaders to be executed when a ray intersects the geometry's triangle/AABB.
     // In this sample, we only use triangle geometry with a closest hit shader, so others are not set.
@@ -440,7 +440,7 @@ void D3D12RaytracingSimpleLighting::CreateRaytracingPipelineStateObject()
     hitGroup->SetClosestHitShaderImport(c_closestHitShaderName);
     hitGroup->SetHitGroupExport(c_hitGroupName);
     hitGroup->SetHitGroupType(D3D12_HIT_GROUP_TYPE_TRIANGLES);
-    
+
     // Shader config
    //  Defines the maximum sizes in bytes for the ray payload and attribute structure.
     auto shaderConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>();
@@ -510,7 +510,7 @@ void D3D12RaytracingSimpleLighting::CreateDescriptorHeap()
     // 2 - vertex and index buffer SRVs for cube
     // 2 - vertex and index buffer SRVs for complex shape
     // 1 - raytracing output texture SRV
-    descriptorHeapDesc.NumDescriptors = 5; 
+    descriptorHeapDesc.NumDescriptors = 5;
     descriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
     descriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
     descriptorHeapDesc.NodeMask = 0;
@@ -525,7 +525,7 @@ void D3D12RaytracingSimpleLighting::BuildGeometry()
 {
     auto device = m_deviceResources->GetD3DDevice();
 
-     // Cube indices.
+    // Cube indices.
     Index indices[] =
     {
         3,1,0,
@@ -586,7 +586,7 @@ void D3D12RaytracingSimpleLighting::BuildGeometry()
 
     // Vertex buffer is passed to the shader along with index buffer as a descriptor table.
     // Vertex buffer descriptor must follow index buffer descriptor in the descriptor heap.
-    UINT descriptorIndexIB = CreateBufferSRV(&m_indexBuffer, sizeof(indices)/4, 0);
+    UINT descriptorIndexIB = CreateBufferSRV(&m_indexBuffer, sizeof(indices) / 4, 0);
     UINT descriptorIndexVB = CreateBufferSRV(&m_vertexBuffer, ARRAYSIZE(vertices), sizeof(vertices[0]));
     ThrowIfFalse(descriptorIndexVB == descriptorIndexIB + 1, L"Vertex Buffer descriptor index must follow that of Index Buffer descriptor index!");
 }
@@ -597,7 +597,7 @@ void D3D12RaytracingSimpleLighting::BuildComplexGeometry()
 {
     auto device = m_deviceResources->GetD3DDevice();
     // Torus knot parameters
-    const int tubularSegments = 500000;
+    const int tubularSegments = 50000;
     const int radialSegments = 16;    // Number of segments around radius
     const float p = 2.0f;             // Number of times around the circle
     const float q = 3.0f;             // Number of times through the circle
@@ -710,13 +710,13 @@ void D3D12RaytracingSimpleLighting::BuildAccelerationStructures()
     // Get required sizes for an acceleration structure.
     D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS buildFlags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
 
-	// Get prebuild info for the bottom-level acceleration structure.
+    // Get prebuild info for the bottom-level acceleration structure.
     D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS cubeBLASInputs = {};
-	cubeBLASInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;   
-	cubeBLASInputs.Flags = buildFlags;  
-	cubeBLASInputs.NumDescs = 1; // 1 geometry desc
-	cubeBLASInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
-	cubeBLASInputs.pGeometryDescs = &cubeGeometryDesc;
+    cubeBLASInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+    cubeBLASInputs.Flags = buildFlags;
+    cubeBLASInputs.NumDescs = 1; // 1 geometry desc
+    cubeBLASInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
+    cubeBLASInputs.pGeometryDescs = &cubeGeometryDesc;
 
     D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS complexBLASInputs = {};
     complexBLASInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
@@ -724,18 +724,18 @@ void D3D12RaytracingSimpleLighting::BuildAccelerationStructures()
     complexBLASInputs.NumDescs = 1; // 1 geometry desc
     complexBLASInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
     complexBLASInputs.pGeometryDescs = &complexGeometryDesc;
-    
+
     D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO cubeBLASPrebuildInfo = {};
     D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO complexBLASPrebuildInfo = {};
 
     m_dxrDevice->GetRaytracingAccelerationStructurePrebuildInfo(&cubeBLASInputs, &cubeBLASPrebuildInfo);
     m_dxrDevice->GetRaytracingAccelerationStructurePrebuildInfo(&complexBLASInputs, &complexBLASPrebuildInfo);
 
-	// Tp-level acceleration structure - 3 instances (two cubes, one complex shape).
-	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS topLevelInputs = {};
+    // Tp-level acceleration structure - 3 instances (two cubes, one complex shape).
+    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS topLevelInputs = {};
     topLevelInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
     topLevelInputs.Flags = buildFlags;
-    topLevelInputs.NumDescs = 30;
+    topLevelInputs.NumDescs = 98;
     topLevelInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
 
     D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO topLevelPrebuildInfo = {};
@@ -751,55 +751,81 @@ void D3D12RaytracingSimpleLighting::BuildAccelerationStructures()
 
     // Allocate resources for acceleration structures.
     // Acceleration structures can only be placed in resources that are created in the default heap (or custom heap equivalent). 
-    // Default heap is OK since the application doesn�t need CPU read/write access to them. 
+    // Default heap is OK since the application doesnt need CPU read/write access to them. 
     // The resources that will contain acceleration structures must be created in the state D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE, 
     // and must have resource flag D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS. The ALLOW_UNORDERED_ACCESS requirement simply acknowledges both: 
     //  - the system will be doing this type of access in its implementation of acceleration structure builds behind the scenes.
     //  - from the app point of view, synchronization of writes/reads to acceleration structures is accomplished using UAV barriers.
     {
         D3D12_RESOURCE_STATES initialResourceState = D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE;
-        
+
         AllocateUAVBuffer(device, cubeBLASPrebuildInfo.ResultDataMaxSizeInBytes, &m_bottomLevelAccelerationStructureCube, initialResourceState, L"BottomLevelAccelerationStructureCube");
-        AllocateUAVBuffer(device, complexBLASPrebuildInfo.ResultDataMaxSizeInBytes, &m_bottomLevelAccelerationStructureComplex, initialResourceState,L"BottomLevelAccelerationStructureComplex");
+        AllocateUAVBuffer(device, complexBLASPrebuildInfo.ResultDataMaxSizeInBytes, &m_bottomLevelAccelerationStructureComplex, initialResourceState, L"BottomLevelAccelerationStructureComplex");
         AllocateUAVBuffer(device, topLevelPrebuildInfo.ResultDataMaxSizeInBytes, &m_topLevelAccelerationStructure, initialResourceState, L"TopLevelAccelerationStructure");
     }
-    
+
     // Create an instance desc for the bottom-level acceleration structure.
-    ComPtr<ID3D12Resource> instanceDescsResource;   
+    ComPtr<ID3D12Resource> instanceDescsResource;
     std::vector<D3D12_RAYTRACING_INSTANCE_DESC> instanceDesc;
-    int cubesPerRow = 5;
-    float cubeSpacing = 4.0f;
-    for (int i = 0; i < 10; ++i) {
-        D3D12_RAYTRACING_INSTANCE_DESC desc = {};
-        desc.Transform[0][0] = desc.Transform[1][1] = desc.Transform[2][2] = 1.0f;
-        // Spread cubes in X and Z, keep Y at 0
-        int row = i / cubesPerRow;
-        int col = i % cubesPerRow;
-        desc.Transform[0][3] = (col - (cubesPerRow / 2)) * cubeSpacing;
-        desc.Transform[1][3] = 0.0f;
-        desc.Transform[2][3] = (row - 0.5f) * cubeSpacing;
-        desc.InstanceMask = 1;
-        desc.AccelerationStructure = m_bottomLevelAccelerationStructureCube->GetGPUVirtualAddress();
-        desc.InstanceID = i;
-        instanceDesc.push_back(desc);
+    int cubesPerRow = 6;     // Cubes per row along X and Z axes
+    float cubeSpacing = 1.0f; // Spacing between cubes
+
+    // Loop through each position in the XZ plane to create cubes
+    for (int x = -cubesPerRow / 2; x <= cubesPerRow / 2; ++x) {
+        for (int z = -cubesPerRow / 2; z <= cubesPerRow / 2; ++z) {
+            D3D12_RAYTRACING_INSTANCE_DESC desc = {};
+            desc.Transform[0][0] = desc.Transform[1][1] = desc.Transform[2][2] = 1.0f;
+
+            // Position the cubes in the XZ plane, Y remains 0 (flat around 0, 0, 0)
+            desc.Transform[0][3] = x * cubeSpacing; // Position along X axis
+            desc.Transform[1][3] = 0.0f;           // Y remains at 0 for all cubes (on the ground)
+            desc.Transform[2][3] = z * cubeSpacing; // Position along Z axis
+
+            desc.InstanceMask = 1;
+            desc.AccelerationStructure = m_bottomLevelAccelerationStructureCube->GetGPUVirtualAddress();
+            desc.InstanceID = instanceDesc.size(); // Unique ID for each cube
+            desc.InstanceContributionToHitGroupIndex = static_cast<UINT>(instanceDesc.size());
+            instanceDesc.push_back(desc);
+           
+        }
     }
+
 
     float complexShapeZ = -15.0f;
     float complexShapeSpacing = 8.0f;
-    for (int i = 0; i < 20; ++i) {
-        D3D12_RAYTRACING_INSTANCE_DESC desc = {};
-        desc.Transform[0][0] = desc.Transform[1][1] = desc.Transform[2][2] = 1.0f;
-        // Spread shapes 
-        int row = i / cubesPerRow;
-        int col = i % cubesPerRow;
-        desc.Transform[0][3] = (col - (cubesPerRow / 2)) * cubeSpacing;
-        desc.Transform[1][3] = 0.0f;
-        desc.Transform[2][3]=complexShapeZ + (row - 0.5f) * cubeSpacing;
-        desc.InstanceMask = 1;
-        desc.AccelerationStructure = m_bottomLevelAccelerationStructureComplex->GetGPUVirtualAddress();
-        desc.InstanceID = 10 + i;
-        instanceDesc.push_back(desc);
+    for (int x = -cubesPerRow / 2; x <= cubesPerRow / 2; ++x) {
+        for (int z = -cubesPerRow / 2; z <= cubesPerRow / 2; ++z) {
+            D3D12_RAYTRACING_INSTANCE_DESC desc = {};
+            desc.Transform[0][0] = desc.Transform[1][1] = desc.Transform[2][2] = 1.0f;
+
+            // Position the complex shapes directly above the cubes
+            desc.Transform[0][3] = x * cubeSpacing; // X position same as cubes
+            desc.Transform[1][3] = 2.0f;           // Y position set to 2.0f (above cubes)
+            desc.Transform[2][3] = z * cubeSpacing; // Z position same as cubes
+
+            desc.InstanceMask = 1;
+            desc.AccelerationStructure = m_bottomLevelAccelerationStructureComplex->GetGPUVirtualAddress();
+            desc.InstanceID = instanceDesc.size(); // Unique ID for each complex shape
+            desc.InstanceContributionToHitGroupIndex = static_cast<UINT>(instanceDesc.size());
+            instanceDesc.push_back(desc);
+        }
     }
+
+
+    //for (int i = 0; i < 20; ++i) {
+    //    D3D12_RAYTRACING_INSTANCE_DESC desc = {};
+    //    desc.Transform[0][0] = desc.Transform[1][1] = desc.Transform[2][2] = 1.0f;
+    //    // Spread shapes 
+    //    int row = i / cubesPerRow;
+    //    int col = i % cubesPerRow;
+    //    desc.Transform[0][3] = (col - (cubesPerRow / 2)) * cubeSpacing;
+    //    desc.Transform[1][3] = 0.0f;
+    //    desc.Transform[2][3] = complexShapeZ + (row - 0.5f) * cubeSpacing;
+    //    desc.InstanceMask = 1;
+    //    desc.AccelerationStructure = m_bottomLevelAccelerationStructureComplex->GetGPUVirtualAddress();
+    //    desc.InstanceID = 10 + i;
+    //    instanceDesc.push_back(desc);
+    //}
 
     AllocateUploadBuffer(device, instanceDesc.data(), instanceDesc.size() * sizeof(D3D12_RAYTRACING_INSTANCE_DESC), &instanceDescsResource, L"InstanceDesc");
 
@@ -826,10 +852,10 @@ void D3D12RaytracingSimpleLighting::BuildAccelerationStructures()
     //instanceDesc[2].InstanceID = 2;
     // AllocateUploadBuffer(device, &instanceDesc, sizeof(instanceDesc), &instanceDescsResource, L"InstanceDescs");
 
-	// Build bottom-level acceleration structures for cube
-	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC cubeBLASDesc = {};
-	cubeBLASDesc.Inputs = cubeBLASInputs;
-	cubeBLASDesc.ScratchAccelerationStructureData = scratchResource->GetGPUVirtualAddress();
+    // Build bottom-level acceleration structures for cube
+    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC cubeBLASDesc = {};
+    cubeBLASDesc.Inputs = cubeBLASInputs;
+    cubeBLASDesc.ScratchAccelerationStructureData = scratchResource->GetGPUVirtualAddress();
     cubeBLASDesc.DestAccelerationStructureData = m_bottomLevelAccelerationStructureCube->GetGPUVirtualAddress();
 
     // Build bottom-level acceleration structures for complex shape
@@ -838,24 +864,24 @@ void D3D12RaytracingSimpleLighting::BuildAccelerationStructures()
     complexBLASDesc.ScratchAccelerationStructureData = scratchResource->GetGPUVirtualAddress();
     complexBLASDesc.DestAccelerationStructureData = m_bottomLevelAccelerationStructureComplex->GetGPUVirtualAddress();
 
-	D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC topLevelBuildDesc = {};
-	topLevelBuildDesc.Inputs = topLevelInputs;
-	topLevelBuildDesc.Inputs.InstanceDescs = instanceDescsResource->GetGPUVirtualAddress();
+    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC topLevelBuildDesc = {};
+    topLevelBuildDesc.Inputs = topLevelInputs;
+    topLevelBuildDesc.Inputs.InstanceDescs = instanceDescsResource->GetGPUVirtualAddress();
     topLevelBuildDesc.DestAccelerationStructureData = m_topLevelAccelerationStructure->GetGPUVirtualAddress();
-	topLevelBuildDesc.ScratchAccelerationStructureData = scratchResource->GetGPUVirtualAddress();
+    topLevelBuildDesc.ScratchAccelerationStructureData = scratchResource->GetGPUVirtualAddress();
 
     auto BuildAccelerationStructure = [&](auto* raytracingCommandList)
-    {
-		raytracingCommandList->BuildRaytracingAccelerationStructure(&cubeBLASDesc, 0, nullptr);
-        commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::UAV(m_bottomLevelAccelerationStructureCube.Get()));
-		raytracingCommandList->BuildRaytracingAccelerationStructure(&complexBLASDesc, 0, nullptr);
-        commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::UAV(m_bottomLevelAccelerationStructureComplex.Get()));
-        raytracingCommandList->BuildRaytracingAccelerationStructure(&topLevelBuildDesc, 0, nullptr);
-    };
+        {
+            raytracingCommandList->BuildRaytracingAccelerationStructure(&cubeBLASDesc, 0, nullptr);
+            commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::UAV(m_bottomLevelAccelerationStructureCube.Get()));
+            raytracingCommandList->BuildRaytracingAccelerationStructure(&complexBLASDesc, 0, nullptr);
+            commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::UAV(m_bottomLevelAccelerationStructureComplex.Get()));
+            raytracingCommandList->BuildRaytracingAccelerationStructure(&topLevelBuildDesc, 0, nullptr);
+        };
 
     // Build acceleration structure.
     BuildAccelerationStructure(m_dxrCommandList.Get());
-    
+
     // Kick off acceleration structure construction.
     m_deviceResources->ExecuteCommandList();
 
@@ -874,11 +900,11 @@ void D3D12RaytracingSimpleLighting::BuildShaderTables()
     void* hitGroupShaderIdentifier;
 
     auto GetShaderIdentifiers = [&](auto* stateObjectProperties)
-    {
-        rayGenShaderIdentifier = stateObjectProperties->GetShaderIdentifier(c_raygenShaderName);
-        missShaderIdentifier = stateObjectProperties->GetShaderIdentifier(c_missShaderName);
-        hitGroupShaderIdentifier = stateObjectProperties->GetShaderIdentifier(c_hitGroupName);
-    };
+        {
+            rayGenShaderIdentifier = stateObjectProperties->GetShaderIdentifier(c_raygenShaderName);
+            missShaderIdentifier = stateObjectProperties->GetShaderIdentifier(c_missShaderName);
+            hitGroupShaderIdentifier = stateObjectProperties->GetShaderIdentifier(c_hitGroupName);
+        };
 
     // Get shader identifiers.
     UINT shaderIdentifierSize;
@@ -916,25 +942,32 @@ void D3D12RaytracingSimpleLighting::BuildShaderTables()
     {
         struct RootArguments {
             CubeConstantBuffer cb;
-        } rootArguments;
-        rootArguments.cb = m_cubeCB;
+        };
 
-        UINT numShaderRecords = 3;
-        UINT shaderRecordSize = shaderIdentifierSize + sizeof(rootArguments);
+        UINT numShaderRecords = 98;
+        UINT shaderRecordSize = shaderIdentifierSize + sizeof(RootArguments);
         ShaderTable hitGroupShaderTable(device, numShaderRecords, shaderRecordSize, L"HitGroupShaderTable");
 
 
-        RootArguments rootArguments1;
-        rootArguments1.cb = m_cubeCB;
-        hitGroupShaderTable.push_back(ShaderRecord(hitGroupShaderIdentifier, shaderIdentifierSize, &rootArguments1, sizeof(rootArguments1)));
+        for (int i = 0; i < 49; ++i) {
+            RootArguments argument;
+            argument.cb = m_cubeCB;
+            argument.cb.albedo = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+            hitGroupShaderTable.push_back(ShaderRecord(
 
-       /* RootArguments rootArguments2;
-        rootArguments2.cb = m_secondCubeCB;
-        hitGroupShaderTable.push_back(ShaderRecord(hitGroupShaderIdentifier, shaderIdentifierSize, &rootArguments2, sizeof(rootArguments2)));*/
+            hitGroupShaderIdentifier, shaderIdentifierSize, &argument, sizeof(argument)));
+        }
 
-        RootArguments rootArguments2;
-        rootArguments2.cb = m_complexShapeCB;
-        hitGroupShaderTable.push_back(ShaderRecord(hitGroupShaderIdentifier, shaderIdentifierSize, &rootArguments2, sizeof(rootArguments2)));
+        for (int i = 0; i < 49; ++i) {
+            RootArguments argument;
+            argument.cb = m_complexShapeCB;
+            argument.cb.albedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+            hitGroupShaderTable.push_back(ShaderRecord(
+
+            hitGroupShaderIdentifier, shaderIdentifierSize, &argument, sizeof(argument)));
+        }
+
+        // Add this line to fix the null pointer issue:
         m_hitGroupShaderTable = hitGroupShaderTable.GetResource();
     }
 }
@@ -973,32 +1006,32 @@ void D3D12RaytracingSimpleLighting::DoRaytracing()
 {
     auto commandList = m_deviceResources->GetCommandList();
     auto frameIndex = m_deviceResources->GetCurrentFrameIndex();
-    
+
     auto DispatchRays = [&](auto* commandList, auto* stateObject, auto* dispatchDesc)
-    {
-        // Since each shader table has only one shader record, the stride is same as the size.
-        dispatchDesc->HitGroupTable.StartAddress = m_hitGroupShaderTable->GetGPUVirtualAddress();
-        dispatchDesc->HitGroupTable.SizeInBytes = m_hitGroupShaderTable->GetDesc().Width;
-        dispatchDesc->HitGroupTable.StrideInBytes = m_hitGroupShaderTable->GetDesc().Width / 3;
-        dispatchDesc->MissShaderTable.StartAddress = m_missShaderTable->GetGPUVirtualAddress();
-        dispatchDesc->MissShaderTable.SizeInBytes = m_missShaderTable->GetDesc().Width;
-        dispatchDesc->MissShaderTable.StrideInBytes = dispatchDesc->MissShaderTable.SizeInBytes;
-        dispatchDesc->RayGenerationShaderRecord.StartAddress = m_rayGenShaderTable->GetGPUVirtualAddress();
-        dispatchDesc->RayGenerationShaderRecord.SizeInBytes = m_rayGenShaderTable->GetDesc().Width;
-        dispatchDesc->Width = m_width;
-        dispatchDesc->Height = m_height;
-        dispatchDesc->Depth = 1;
-        commandList->SetPipelineState1(stateObject);
-        commandList->DispatchRays(dispatchDesc);
-    };
+        {
+            // Since each shader table has only one shader record, the stride is same as the size.
+            dispatchDesc->HitGroupTable.StartAddress = m_hitGroupShaderTable->GetGPUVirtualAddress();
+            dispatchDesc->HitGroupTable.SizeInBytes = m_hitGroupShaderTable->GetDesc().Width;
+            dispatchDesc->HitGroupTable.StrideInBytes = m_hitGroupShaderTable->GetDesc().Width / 98;
+            dispatchDesc->MissShaderTable.StartAddress = m_missShaderTable->GetGPUVirtualAddress();
+            dispatchDesc->MissShaderTable.SizeInBytes = m_missShaderTable->GetDesc().Width;
+            dispatchDesc->MissShaderTable.StrideInBytes = dispatchDesc->MissShaderTable.SizeInBytes;
+            dispatchDesc->RayGenerationShaderRecord.StartAddress = m_rayGenShaderTable->GetGPUVirtualAddress();
+            dispatchDesc->RayGenerationShaderRecord.SizeInBytes = m_rayGenShaderTable->GetDesc().Width;
+            dispatchDesc->Width = m_width;
+            dispatchDesc->Height = m_height;
+            dispatchDesc->Depth = 1;
+            commandList->SetPipelineState1(stateObject);
+            commandList->DispatchRays(dispatchDesc);
+        };
 
     auto SetCommonPipelineState = [&](auto* descriptorSetCommandList)
-    {
-        descriptorSetCommandList->SetDescriptorHeaps(1, m_descriptorHeap.GetAddressOf());
-        // Set index and successive vertex buffer decriptor tables
-        commandList->SetComputeRootDescriptorTable(GlobalRootSignatureParams::VertexBuffersSlot, m_indexBuffer.gpuDescriptorHandle);
-        commandList->SetComputeRootDescriptorTable(GlobalRootSignatureParams::OutputViewSlot, m_raytracingOutputResourceUAVGpuDescriptor);
-    };
+        {
+            descriptorSetCommandList->SetDescriptorHeaps(1, m_descriptorHeap.GetAddressOf());
+            // Set index and successive vertex buffer decriptor tables
+            commandList->SetComputeRootDescriptorTable(GlobalRootSignatureParams::VertexBuffersSlot, m_indexBuffer.gpuDescriptorHandle);
+            commandList->SetComputeRootDescriptorTable(GlobalRootSignatureParams::OutputViewSlot, m_raytracingOutputResourceUAVGpuDescriptor);
+        };
 
     commandList->SetComputeRootSignature(m_raytracingGlobalRootSignature.Get());
 
@@ -1006,7 +1039,7 @@ void D3D12RaytracingSimpleLighting::DoRaytracing()
     memcpy(&m_mappedConstantData[frameIndex].constants, &m_sceneCB[frameIndex], sizeof(m_sceneCB[frameIndex]));
     auto cbGpuAddress = m_perFrameConstants->GetGPUVirtualAddress() + frameIndex * sizeof(m_mappedConstantData[0]);
     commandList->SetComputeRootConstantBufferView(GlobalRootSignatureParams::SceneConstantSlot, cbGpuAddress);
-   
+
     // Bind the heaps, acceleration structure and dispatch rays.
     D3D12_DISPATCH_RAYS_DESC dispatchDesc = {};
     SetCommonPipelineState(commandList);
@@ -1023,7 +1056,7 @@ void D3D12RaytracingSimpleLighting::UpdateForSizeChange(UINT width, UINT height)
 // Copy the raytracing output to the backbuffer.
 void D3D12RaytracingSimpleLighting::CopyRaytracingOutputToBackbuffer()
 {
-    auto commandList= m_deviceResources->GetCommandList();
+    auto commandList = m_deviceResources->GetCommandList();
     auto renderTarget = m_deviceResources->GetRenderTarget();
 
     D3D12_RESOURCE_BARRIER preCopyBarriers[2];
@@ -1043,7 +1076,7 @@ void D3D12RaytracingSimpleLighting::CopyRaytracingOutputToBackbuffer()
 // Create resources that are dependent on the size of the main window.
 void D3D12RaytracingSimpleLighting::CreateWindowSizeDependentResources()
 {
-    CreateRaytracingOutputResource(); 
+    CreateRaytracingOutputResource();
     UpdateCameraMatrices();
 }
 
@@ -1073,7 +1106,7 @@ void D3D12RaytracingSimpleLighting::ReleaseDeviceDependentResources()
     m_missShaderTable.Reset();
     m_hitGroupShaderTable.Reset();
 
-   //_bottomLevelAccelerationStructure.Reset();
+    //_bottomLevelAccelerationStructure.Reset();
     m_bottomLevelAccelerationStructureComplex.Reset();
     m_bottomLevelAccelerationStructureCube.Reset();
     m_topLevelAccelerationStructure.Reset();
