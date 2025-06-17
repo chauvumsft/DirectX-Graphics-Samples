@@ -16,7 +16,7 @@
 #define HLSL
 //#define SER_WORKLOAD_TEST
 #define WORK_LOOP_ITERATIONS_LIGHT   5000         // «baseline»
-#define WORK_LOOP_ITERATIONS_HEAVY   (WORK_LOOP_ITERATIONS_LIGHT * 5)  // 5 × heavier
+#define WORK_LOOP_ITERATIONS_HEAVY   (WORK_LOOP_ITERATIONS_LIGHT * 15)  // 5 × heavier
 #define RAYS_WITH_HEAVY_WORK_FRACTION 5            // every 5-th ray
 // Constants for controlling light sample counts
 #define LIGHT_SAMPLES_LIGHT 1
@@ -27,8 +27,6 @@
 
 #include "RaytracingHlslCompat.h"
 using namespace dx;
-
-
 RaytracingAccelerationStructure Scene : register(t0, space0);
 RWTexture2D<float4> RenderTarget : register(u0);
 ByteAddressBuffer Indices : register(t1, space0);
@@ -37,14 +35,13 @@ StructuredBuffer<Vertex> Vertices : register(t2, space0);
 ConstantBuffer<SceneConstantBuffer> g_sceneCB : register(b0);
 ConstantBuffer<CubeConstantBuffer> g_cubeCB : register(b1);
  
-    
 float rand(float3 seed)
 {
-// Simple hash function
+    // Simple hash function
     return frac(sin(dot(seed, float3(12.9898, 78.233, 45.5432))) * 43758.5453);
 }
 
-// Load three 16 bit indices from a byte addressed buffer.
+    // Load three 16 bit indices from a byte addressed buffer.
 uint3 Load3x16BitIndices(uint offsetBytes)
 {
     uint3 indices;
@@ -56,7 +53,7 @@ uint3 Load3x16BitIndices(uint offsetBytes)
     // based on first index's offsetBytes being aligned at the 4 byte boundary or not:
     //  Aligned:     { 0 1 | 2 - }
     //  Not aligned: { - 0 | 1 2 }
-    const uint dwordAlignedOffset = offsetBytes & ~3;    
+    const uint dwordAlignedOffset = offsetBytes & ~3;
     const uint2 four16BitIndices = Indices.Load2(dwordAlignedOffset);
  
     // Aligned: { 0 1 | 2 - } => retrieve first three 16bit indices
@@ -83,7 +80,6 @@ typedef BuiltInTriangleIntersectionAttributes MyAttributes;
 struct [raypayload] RayPayload
 {
     float4 color : write(caller, closesthit, miss) : read(caller);
-    uint iterations : write(caller) : read(closesthit);
 };
    
 
@@ -97,8 +93,8 @@ float3 HitWorldPosition()
 float3 HitAttribute(float3 vertexAttribute[3], BuiltInTriangleIntersectionAttributes attr)
 {
     return vertexAttribute[0] +
-        attr.barycentrics.x * (vertexAttribute[1] - vertexAttribute[0]) +
-        attr.barycentrics.y * (vertexAttribute[2] - vertexAttribute[0]);
+    attr.barycentrics.x * (vertexAttribute[1] - vertexAttribute[0]) +
+    attr.barycentrics.y * (vertexAttribute[2] - vertexAttribute[0]);
 }
 
 // Generate a ray in world space for a camera pixel corresponding to an index from the dispatched 2D grid.
@@ -107,13 +103,13 @@ inline void GenerateCameraRay(uint2 index, out float3 origin, out float3 directi
     float2 xy = index + 0.5f; // center in the middle of the pixel.
     float2 screenPos = xy / DispatchRaysDimensions().xy * 2.0 - 1.0;
 
-    // Invert Y for DirectX-style coordinates.
+// Invert Y for DirectX-style coordinates.
     screenPos.y = -screenPos.y;
 
-    // Unproject the pixel coordinate into a ray.
-    //float4 world = mul(float4(screenPos, 0, 1), g_sceneCB.projectionToWorld);
+// Unproject the pixel coordinate into a ray.
+//float4 world = mul(float4(screenPos, 0, 1), g_sceneCB.projectionToWorld);
         
-    // Switch!
+// Switch!
     float4 world = mul(g_sceneCB.projectionToWorld, float4(screenPos, 0, 1));
 
     world.xyz /= world.w;
@@ -152,37 +148,42 @@ void MyRaygenShader()
     
     
     //uint iterations = (g_cubeCB.materialID == 1) ? WORK_LOOP_ITERATIONS_HEAVY : WORK_LOOP_ITERATIONS_LIGHT;
+    //     uint iterations = WORK_LOOP_ITERATIONS_LIGHT;
     //#ifdef USE_VARYING_ARTIFICIAL_WORK
-    //    // every Nth ray takes the “heavy” path
-    //    if ((DispatchRaysIndex().x % RAYS_WITH_HEAVY_WORK_FRACTION) == 0)
-    //        iterations = WORK_LOOP_ITERATIONS_HEAVY;
-    //#endif   
+        // every Nth ray takes the “heavy” path
+    //   if ((DispatchRaysIndex().x % RAYS_WITH_HEAVY_WORK_FRACTION) == 0)
+    //         iterations = WORK_LOOP_ITERATIONS_HEAVY;
+    // #endif   
         
-    bool isHeavy = (g_cubeCB.materialID == 1) && ((DispatchRaysIndex().x % RAYS_WITH_HEAVY_WORK_FRACTION) == 0);
-    uint iterations = isHeavy ? WORK_LOOP_ITERATIONS_HEAVY : WORK_LOOP_ITERATIONS_LIGHT;
+    // bool isHeavy = (g_cubeCB.materialID == 1) && ((DispatchRaysIndex().x % RAYS_WITH_HEAVY_WORK_FRACTION) == 0);
+    //uint iterations = isHeavy ? WORK_LOOP_ITERATIONS_HEAVY : WORK_LOOP_ITERATIONS_LIGHT;
 
     RayPayload payload =
     {
         float4(0, 0, 0, 0),
-        iterations
+        //iterations
     };
 
     #ifdef SER_WORKLOAD_TEST
         HitObject hit = HitObject::TraceRay(Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 1, 0, ray, payload);
+        uint materialID = hit.LoadLocalRootTableConstant(16);
     
-        int sortKey = g_cubeCB.materialID * 10 + DispatchRaysIndex().x % 5;
-        //int sortKey = (payload.iterations != WORK_LOOP_ITERATIONS_LIGHT) ? 1 : 0;
+        //int sortKey = materialID;
+        int sortKey = (materialID != 1.0f) ? 1 : 0;
+        //uint iterations = 5000 + 1000 * complexityHint;
+        
         dx::MaybeReorderThread(sortKey, 1);
 
         HitObject::Invoke(hit, payload);
     #else
         TraceRay(Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 1, 0, ray, payload);
     #endif
-        float4 color = payload.color;
+        
+    float4 color = payload.color;
 
-        // Write the raytraced color to the output texture.
-        RenderTarget[DispatchRaysIndex().xy] = color;
-    }
+    // Write the raytraced color to the output texture.
+    RenderTarget[DispatchRaysIndex().xy] = color;
+}
 
     
 [shader("closesthit")]
@@ -195,7 +196,7 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
     uint indicesPerTriangle = 3;
     uint triangleIndexStride = indicesPerTriangle * indexSizeInBytes;
     uint baseIndex = PrimitiveIndex() * triangleIndexStride;
-
+    
     // Load up 3 16 bit indices for the triangle.
     const uint3 indices = Load3x16BitIndices(baseIndex);
 
@@ -203,8 +204,8 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
     float3 vertexNormals[3] =
     {
         Vertices[indices[0]].normal,
-        Vertices[indices[1]].normal,
-        Vertices[indices[2]].normal 
+    Vertices[indices[1]].normal,
+    Vertices[indices[2]].normal 
     };
 
     // Compute the triangle's normal.
@@ -230,7 +231,7 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
         float roughness = 0.3f;
         float alpha = roughness * roughness;
 
-        for (uint i = 0; i < payload.iterations; ++i)
+        for (uint i = 0; i < 5000; ++i)
         {
         // Vary half vector slightly per iteration to simulate microfacet sampling
             float3 jitter = float3(sin(i * 12.9898f), cos(i * 78.233f), sin(i * 37.719f)) * 0.01f;
@@ -262,11 +263,11 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
             accumulatedDiffuse += diffuse;
         }
 
-        finalColor = (accumulatedDiffuse + accumulatedSpecular) / payload.iterations;
+        finalColor = (accumulatedDiffuse + accumulatedSpecular) / 500;
     }
-        else
+    else if (g_cubeCB.materialID == 0.0f)
     {
-        // Simple diffuse for other materials
+    // Simple diffuse for other materials
         float NdotL = saturate(dot(normal, lightDir));
         finalColor = sampled.rgb * g_sceneCB.lightDiffuseColor.rgb * NdotL;
     }

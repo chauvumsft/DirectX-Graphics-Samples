@@ -792,16 +792,16 @@ void D3D12RaytracingSimpleLighting::BuildAccelerationStructures()
 
 
     float complexShapeZ = -15.0f;
-    float complexShapeSpacing = 8.0f;
+    float complexShapeSpacing = 1.0f;
     for (int x = -cubesPerRow / 2; x <= cubesPerRow / 2; ++x) {
         for (int z = -cubesPerRow / 2; z <= cubesPerRow / 2; ++z) {
             D3D12_RAYTRACING_INSTANCE_DESC desc = {};
             desc.Transform[0][0] = desc.Transform[1][1] = desc.Transform[2][2] = 1.0f;
 
             // Position the complex shapes directly above the cubes
-            desc.Transform[0][3] = x * cubeSpacing; // X position same as cubes
+            desc.Transform[0][3] = x * complexShapeSpacing; // X position same as cubes
             desc.Transform[1][3] = 2.0f;           // Y position set to 2.0f (above cubes)
-            desc.Transform[2][3] = z * cubeSpacing; // Z position same as cubes
+            desc.Transform[2][3] = z * complexShapeSpacing; // Z position same as cubes
 
             desc.InstanceMask = 1;
             desc.AccelerationStructure = m_bottomLevelAccelerationStructureComplex->GetGPUVirtualAddress();
@@ -952,7 +952,7 @@ void D3D12RaytracingSimpleLighting::BuildShaderTables()
         for (int i = 0; i < 121; ++i) {
             RootArguments argument;
             argument.cb = m_cubeCB;
-            argument.cb.albedo = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.1f);
+            argument.cb.albedo = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.1f); // 16 bytes (4 floats × 4 bytes)
             argument.cb.materialID = 0.0f;
             hitGroupShaderTable.push_back(ShaderRecord(
 
@@ -962,7 +962,7 @@ void D3D12RaytracingSimpleLighting::BuildShaderTables()
         for (int i = 0; i < 121; ++i) {
             RootArguments argument;
             argument.cb = m_complexShapeCB;
-            argument.cb.albedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 0.1f);
+            argument.cb.albedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 0.1f); // 16 bytes (4 floats × 4 bytes)
             argument.cb.materialID = 1.0f;
             hitGroupShaderTable.push_back(ShaderRecord(
 
