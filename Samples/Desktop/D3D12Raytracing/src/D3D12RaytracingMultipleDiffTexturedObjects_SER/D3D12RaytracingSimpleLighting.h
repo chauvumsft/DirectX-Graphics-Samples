@@ -51,6 +51,9 @@ public:
 
 private:
     static const UINT FrameCount = 3;
+    static const UINT TextureWidth = 256;
+    static const UINT TextureHeight = 256;
+    static const UINT TexturePixelSize = 4;
 
     // We'll allocate space for several of these and they will need to be padded for alignment.
     static_assert(sizeof(SceneConstantBuffer) < D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT, "Checking the size here.");
@@ -128,6 +131,7 @@ private:
     void RecreateD3D();
     void DoRaytracing();
     void CreateConstantBuffers();
+    std::vector<UINT8> GenerateTextureData();
     void CreateDeviceDependentResources();
     void CreateWindowSizeDependentResources();
     void ReleaseDeviceDependentResources();

@@ -336,7 +336,7 @@ void D3D12RaytracingSimpleLighting::CreateRootSignatures()
     {
         CD3DX12_DESCRIPTOR_RANGE ranges[2]; // Perfomance TIP: Order from most frequent to least frequent.
         ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);  // 1 output texture
-        ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2, 1);  // 2 static index and vertex buffers.
+        ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 3, 1);  // 2 static index and vertex buffers + 1 texture
 
         CD3DX12_ROOT_PARAMETER rootParameters[GlobalRootSignatureParams::Count];
         rootParameters[GlobalRootSignatureParams::OutputViewSlot].InitAsDescriptorTable(1, &ranges[0]);
@@ -661,6 +661,7 @@ void D3D12RaytracingSimpleLighting::BuildComplexGeometry()
     UINT descriptorIndexVB = CreateBufferSRV(&m_complexVertexBuffer, (UINT)vertices.size(), sizeof(Vertex));
     ThrowIfFalse(descriptorIndexVB == descriptorIndexIB + 1, L"Complex shape vertex buffer descriptor index must follow that of index buffer descriptor index!");
 }
+
 
 // Build acceleration structures needed for raytracing.
 void D3D12RaytracingSimpleLighting::BuildAccelerationStructures()
@@ -1245,4 +1246,40 @@ UINT D3D12RaytracingSimpleLighting::CreateBufferSRV(D3DBuffer* buffer, UINT numE
     device->CreateShaderResourceView(buffer->resource.Get(), &srvDesc, buffer->cpuDescriptorHandle);
     buffer->gpuDescriptorHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_descriptorHeap->GetGPUDescriptorHandleForHeapStart(), descriptorIndex, m_descriptorSize);
     return descriptorIndex;
+}
+
+std::vector<UINT8> D3D12RaytracingSimpleLighting::GenerateTextureData()
+{
+    const UINT rowPitch = TextureWidth * TexturePixelSize;
+    const UINT cellPitch = rowPitch >> 3;        // The width of a cell in the checkboard texture.
+    const UINT cellHeight = TextureWidth >> 3;    // The height of a cell in the checkerboard texture.
+    const UINT textureSize = rowPitch * TextureHeight;
+
+    std::vector<UINT8> data(textureSize);
+    UINT8* pData = &data[0];
+
+    for (UINT n = 0; n < textureSize; n += TexturePixelSize)
+    {
+        UINT x = n % rowPitch;
+        UINT y = n / rowPitch;
+        UINT i = x / cellPitch;
+        UINT j = y / cellHeight;
+
+        if (i % 2 == j % 2)
+        {
+            pData[n] = 0x00;        // R
+            pData[n + 1] = 0x00;    // G
+            pData[n + 2] = 0x00;    // B
+            pData[n + 3] = 0xff;    // A
+        }
+        else
+        {
+            pData[n] = 0xff;        // R
+            pData[n + 1] = 0xff;    // G
+            pData[n + 2] = 0xff;    // B
+            pData[n + 3] = 0xff;    // A
+        }
+    }
+
+    return data;
 }

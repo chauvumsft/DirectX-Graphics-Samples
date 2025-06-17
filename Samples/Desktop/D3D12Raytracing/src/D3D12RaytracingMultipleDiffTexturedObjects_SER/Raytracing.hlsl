@@ -14,7 +14,7 @@
 #define USE_VARYING_ARTIFICIAL_WORK          // comment out to disable the test
 #define RAYTRACING_HLSL
 #define HLSL
-#define SER_WORKLOAD_TEST
+//#define SER_WORKLOAD_TEST
 #define WORK_LOOP_ITERATIONS_LIGHT   5000         // «baseline»
 #define WORK_LOOP_ITERATIONS_HEAVY   (WORK_LOOP_ITERATIONS_LIGHT * 15)  // 5 × heavier
 #define RAYS_WITH_HEAVY_WORK_FRACTION 5            // every 5-th ray
@@ -35,13 +35,17 @@ StructuredBuffer<Vertex> Vertices : register(t2, space0);
 ConstantBuffer<SceneConstantBuffer> g_sceneCB : register(b0);
 ConstantBuffer<CubeConstantBuffer> g_cubeCB : register(b1);
  
-float rand(float3 seed)
+    
+float CheckerboardPattern(float2 uv, float scale)
 {
-    // Simple hash function
-    return frac(sin(dot(seed, float3(12.9898, 78.233, 45.5432))) * 43758.5453);
+    float2 scaledUV = uv * scale;
+    float2 intPart;
+    modf(scaledUV, intPart);
+    float checker = fmod(intPart.x + intPart.y, 2.0f);
+    return checker < 1.0f ? 0.0f : 1.0f;
 }
-
-    // Load three 16 bit indices from a byte addressed buffer.
+    
+// Load three 16 bit indices from a byte addressed buffer.
 uint3 Load3x16BitIndices(uint offsetBytes)
 {
     uint3 indices;
@@ -166,13 +170,19 @@ void MyRaygenShader()
 
     #ifdef SER_WORKLOAD_TEST
         HitObject hit = HitObject::TraceRay(Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 1, 0, ray, payload);
+        
         uint materialID = hit.LoadLocalRootTableConstant(16);
     
-        int sortKey = materialID;
-        //int sortKey = (payload.iterations != WORK_LOOP_ITERATIONS_LIGHT) ? 1 : 0;        
-        dx::MaybeReorderThread(sortKey, 1);
-
+        int sortKey = asfloat(materialID);
+        uint hintBits = 1;
+        
+        dx::MaybeReorderThread(hit, materialID, 1);        
         HitObject::Invoke(hit, payload);
+
+        
+        //int sortKey = (payload.iterations != WORK_LOOP_ITERATIONS_LIGHT) ? 1 : 0;        
+        //dx::MaybeReorderThread(sortKey, 1);
+        
     #else
         TraceRay(Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 1, 0, ray, payload);
     #endif
@@ -202,8 +212,8 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
     float3 vertexNormals[3] =
     {
         Vertices[indices[0]].normal,
-    Vertices[indices[1]].normal,
-    Vertices[indices[2]].normal 
+        Vertices[indices[1]].normal,
+        Vertices[indices[2]].normal 
     };
 
     // Compute the triangle's normal.
@@ -229,41 +239,17 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
         float roughness = 0.3f;
         float alpha = roughness * roughness;
 
-        for (uint i = 0; i < 5000; ++i)
+        float dummy = 0.0f;
+        for (uint i = 0; i < 200000; ++i)
         {
-        // Vary half vector slightly per iteration to simulate microfacet sampling
-            float3 jitter = float3(sin(i * 12.9898f), cos(i * 78.233f), sin(i * 37.719f)) * 0.01f;
-            float3 halfVec = normalize(viewDir + lightDir + jitter);
-
-            float NdotH = saturate(dot(normal, halfVec));
-            float NdotL = saturate(dot(normal, lightDir));
-            float NdotV = saturate(dot(normal, viewDir));
-            float VdotH = saturate(dot(viewDir, halfVec));
-
-        // GGX Normal Distribution Function
-            float alpha2 = alpha * alpha;
-            float denom = (NdotH * NdotH) * (alpha2 - 1.0f) + 1.0f;
-            float D = alpha2 / (3.14 * denom * denom + 1e-5f);
-
-        // Fresnel-Schlick
-            float3 F = F0 + (1.0f - F0) * pow(1.0f - VdotH, 5.0f);
-
-        // Smith Geometry Function
-            float k = (roughness + 1.0f) * (roughness + 1.0f) / 8.0f;
-            float G_V = NdotV / (NdotV * (1.0f - k) + k);
-            float G_L = NdotL / (NdotL * (1.0f - k) + k);
-            float G = G_V * G_L;
-
-            float3 specular = (D * F * G) / max(4.0f * NdotL * NdotV, 1e-5f);
-            float3 diffuse = sampled.rgb * g_sceneCB.lightDiffuseColor.rgb * NdotL;
-
-            accumulatedSpecular += specular;
-            accumulatedDiffuse += diffuse;
+            if (i % 2)
+                dummy *= 1.175494e-38; // FLT_MIN
+            else
+                dummy -= 1.175494e-38; // FLT_MIN
         }
-
-        finalColor = (accumulatedDiffuse + accumulatedSpecular) / 500;
-    }
-    else if (g_cubeCB.materialID == 0.0f)
+        finalColor = (dummy);
+    }  
+    else
     {
     // Simple diffuse for other materials
         float NdotL = saturate(dot(normal, lightDir));

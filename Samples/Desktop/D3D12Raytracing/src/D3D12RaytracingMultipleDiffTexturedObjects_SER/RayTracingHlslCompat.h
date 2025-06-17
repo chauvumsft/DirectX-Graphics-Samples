@@ -33,7 +33,7 @@ struct SceneConstantBuffer
 struct CubeConstantBuffer
 {
     XMFLOAT4 albedo;
-    float materialID;
+    uint32_t materialID;
 };
 
 struct Vertex
