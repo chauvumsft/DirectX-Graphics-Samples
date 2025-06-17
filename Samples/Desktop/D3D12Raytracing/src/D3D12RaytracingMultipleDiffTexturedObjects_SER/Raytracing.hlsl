@@ -170,19 +170,11 @@ void MyRaygenShader()
 
     #ifdef SER_WORKLOAD_TEST
         HitObject hit = HitObject::TraceRay(Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 1, 0, ray, payload);
-        
         uint materialID = hit.LoadLocalRootTableConstant(16);
-    
-        int sortKey = asfloat(materialID);
         uint hintBits = 1;
         
-        dx::MaybeReorderThread(hit, materialID, 1);        
-        HitObject::Invoke(hit, payload);
-
-        
-        //int sortKey = (payload.iterations != WORK_LOOP_ITERATIONS_LIGHT) ? 1 : 0;        
-        //dx::MaybeReorderThread(sortKey, 1);
-        
+        dx::MaybeReorderThread(materialID, hintBits);        
+        HitObject::Invoke(hit, payload);  
     #else
         TraceRay(Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 1, 0, ray, payload);
     #endif
@@ -231,14 +223,8 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
     float3 normal = triangleNormal;
     float3 finalColor = float3(0, 0, 0);
 
-    if (g_cubeCB.materialID == 1.0f)
+    if (g_cubeCB.materialID == 1)
     {
-        float3 accumulatedSpecular = float3(0, 0, 0);
-        float3 accumulatedDiffuse = float3(0, 0, 0);
-        float3 F0 = float3(0.04f, 0.04f, 0.04f); // dielectric base reflectivity
-        float roughness = 0.3f;
-        float alpha = roughness * roughness;
-
         float dummy = 0.0f;
         for (uint i = 0; i < 200000; ++i)
         {

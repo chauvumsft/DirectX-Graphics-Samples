@@ -793,7 +793,7 @@ void D3D12RaytracingSimpleLighting::BuildAccelerationStructures()
 
 
     float complexShapeZ = -15.0f;
-    float complexShapeSpacing = 1.0f;
+    float complexShapeSpacing = 1.5f;
     for (int x = -cubesPerRow / 2; x <= cubesPerRow / 2; ++x) {
         for (int z = -cubesPerRow / 2; z <= cubesPerRow / 2; ++z) {
             D3D12_RAYTRACING_INSTANCE_DESC desc = {};
@@ -954,7 +954,7 @@ void D3D12RaytracingSimpleLighting::BuildShaderTables()
             RootArguments argument;
             argument.cb = m_cubeCB;
             argument.cb.albedo = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.1f); // 16 bytes (4 floats × 4 bytes)
-            argument.cb.materialID = 0.0f;
+            argument.cb.materialID = 0;
             hitGroupShaderTable.push_back(ShaderRecord(
 
             hitGroupShaderIdentifier, shaderIdentifierSize, &argument, sizeof(argument)));
@@ -964,7 +964,7 @@ void D3D12RaytracingSimpleLighting::BuildShaderTables()
             RootArguments argument;
             argument.cb = m_complexShapeCB;
             argument.cb.albedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 0.1f); // 16 bytes (4 floats × 4 bytes)
-            argument.cb.materialID = 1.0f;
+            argument.cb.materialID = 1;
             hitGroupShaderTable.push_back(ShaderRecord(
 
             hitGroupShaderIdentifier, shaderIdentifierSize, &argument, sizeof(argument)));
