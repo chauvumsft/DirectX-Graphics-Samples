@@ -14,7 +14,7 @@
 #define USE_VARYING_ARTIFICIAL_WORK          // comment out to disable the test
 #define RAYTRACING_HLSL
 #define HLSL
-//#define SER_WORKLOAD_TEST
+#define SER_WORKLOAD_TEST
 #define WORK_LOOP_ITERATIONS_LIGHT   5000         // «baseline»
 #define WORK_LOOP_ITERATIONS_HEAVY   (WORK_LOOP_ITERATIONS_LIGHT * 15)  // 5 × heavier
 #define RAYS_WITH_HEAVY_WORK_FRACTION 5            // every 5-th ray
@@ -168,10 +168,8 @@ void MyRaygenShader()
         HitObject hit = HitObject::TraceRay(Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 1, 0, ray, payload);
         uint materialID = hit.LoadLocalRootTableConstant(16);
     
-        //int sortKey = materialID;
-        int sortKey = (materialID != 1.0f) ? 1 : 0;
-        //uint iterations = 5000 + 1000 * complexityHint;
-        
+        int sortKey = materialID;
+        //int sortKey = (payload.iterations != WORK_LOOP_ITERATIONS_LIGHT) ? 1 : 0;        
         dx::MaybeReorderThread(sortKey, 1);
 
         HitObject::Invoke(hit, payload);
