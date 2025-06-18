@@ -213,7 +213,7 @@ void D3D12RaytracingSimpleLighting::InitializeScene()
     // Setup camera.
     {
         // Initialize the view and projection inverse matrices.
-        m_eye = { 0.0f, 6.0f, -4.0f, 1.0f };
+        m_eye = { 0.0f, 75.0f, -4.0f, 1.0f };
         m_at = { 0.0f, 0.0f, 0.0f, 1.0f };
         XMVECTOR right = { 1.0f, 0.0f, 0.0f, 0.0f };
 
@@ -736,7 +736,7 @@ void D3D12RaytracingSimpleLighting::BuildAccelerationStructures()
     D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS topLevelInputs = {};
     topLevelInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
     topLevelInputs.Flags = buildFlags;
-    topLevelInputs.NumDescs = 242;
+    topLevelInputs.NumDescs = 20402;
     topLevelInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
 
     D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO topLevelPrebuildInfo = {};
@@ -768,8 +768,8 @@ void D3D12RaytracingSimpleLighting::BuildAccelerationStructures()
     // Create an instance desc for the bottom-level acceleration structure.
     ComPtr<ID3D12Resource> instanceDescsResource;
     std::vector<D3D12_RAYTRACING_INSTANCE_DESC> instanceDesc;
-    int cubesPerRow = 10;     // Cubes per row along X and Z axes
-    float cubeSpacing = 1.0f; // Spacing between cubes
+    int cubesPerRow = 100;     // Cubes per row along X and Z axes
+    float cubeSpacing = 2.2f; // Spacing between cubes
 
     // Loop through each position in the XZ plane to create cubes
     for (int x = -cubesPerRow / 2; x <= cubesPerRow / 2; ++x) {
@@ -793,7 +793,7 @@ void D3D12RaytracingSimpleLighting::BuildAccelerationStructures()
 
 
     float complexShapeZ = -15.0f;
-    float complexShapeSpacing = 1.5f;
+    float complexShapeSpacing = 1.3f;
     for (int x = -cubesPerRow / 2; x <= cubesPerRow / 2; ++x) {
         for (int z = -cubesPerRow / 2; z <= cubesPerRow / 2; ++z) {
             D3D12_RAYTRACING_INSTANCE_DESC desc = {};
@@ -945,12 +945,12 @@ void D3D12RaytracingSimpleLighting::BuildShaderTables()
             CubeConstantBuffer cb;
         };
 
-        UINT numShaderRecords = 242;
+        UINT numShaderRecords = 20402;
         UINT shaderRecordSize = shaderIdentifierSize + sizeof(RootArguments);
         ShaderTable hitGroupShaderTable(device, numShaderRecords, shaderRecordSize, L"HitGroupShaderTable");
 
 
-        for (int i = 0; i < 121; ++i) {
+        for (int i = 0; i < 10201; ++i) {
             RootArguments argument;
             argument.cb = m_cubeCB;
             argument.cb.albedo = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.1f); // 16 bytes (4 floats × 4 bytes)
@@ -960,7 +960,7 @@ void D3D12RaytracingSimpleLighting::BuildShaderTables()
             hitGroupShaderIdentifier, shaderIdentifierSize, &argument, sizeof(argument)));
         }
 
-        for (int i = 0; i < 121; ++i) {
+        for (int i = 0; i < 10201; ++i) {
             RootArguments argument;
             argument.cb = m_complexShapeCB;
             argument.cb.albedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 0.1f); // 16 bytes (4 floats × 4 bytes)
@@ -1015,7 +1015,7 @@ void D3D12RaytracingSimpleLighting::DoRaytracing()
             // Since each shader table has only one shader record, the stride is same as the size.
             dispatchDesc->HitGroupTable.StartAddress = m_hitGroupShaderTable->GetGPUVirtualAddress();
             dispatchDesc->HitGroupTable.SizeInBytes = m_hitGroupShaderTable->GetDesc().Width;
-            dispatchDesc->HitGroupTable.StrideInBytes = m_hitGroupShaderTable->GetDesc().Width / 242;
+            dispatchDesc->HitGroupTable.StrideInBytes = m_hitGroupShaderTable->GetDesc().Width / 20402;
             dispatchDesc->MissShaderTable.StartAddress = m_missShaderTable->GetGPUVirtualAddress();
             dispatchDesc->MissShaderTable.SizeInBytes = m_missShaderTable->GetDesc().Width;
             dispatchDesc->MissShaderTable.StrideInBytes = dispatchDesc->MissShaderTable.SizeInBytes;

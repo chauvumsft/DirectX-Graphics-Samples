@@ -14,7 +14,7 @@
 #define USE_VARYING_ARTIFICIAL_WORK          // comment out to disable the test
 #define RAYTRACING_HLSL
 #define HLSL
-//#define SER_WORKLOAD_TEST
+#define SER_WORKLOAD_TEST
 #define WORK_LOOP_ITERATIONS_LIGHT   5000         // «baseline»
 #define WORK_LOOP_ITERATIONS_HEAVY   (WORK_LOOP_ITERATIONS_LIGHT * 15)  // 5 × heavier
 #define RAYS_WITH_HEAVY_WORK_FRACTION 5            // every 5-th ray
@@ -173,7 +173,7 @@ void MyRaygenShader()
         uint materialID = hit.LoadLocalRootTableConstant(16);
         uint hintBits = 1;
         
-        dx::MaybeReorderThread(materialID, hintBits);        
+        dx::MaybeReorderThread(hit);        
         HitObject::Invoke(hit, payload);  
     #else
         TraceRay(Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 1, 0, ray, payload);
@@ -223,12 +223,12 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
     float3 normal = triangleNormal;
     float3 finalColor = float3(0, 0, 0);
 
-    if (g_cubeCB.materialID == 1)
+    if (g_cubeCB.materialID == 0)
     {
-        float dummy = 0.0f;
-        for (uint i = 0; i < 200000; ++i)
+        float dummy = 1.0f;
+        for (uint i = 0; i < 300000; ++i)
         {
-            if (i % 2)
+            if (i & 1)
                 dummy *= 1.175494e-38; // FLT_MIN
             else
                 dummy -= 1.175494e-38; // FLT_MIN
