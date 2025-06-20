@@ -149,7 +149,7 @@ D3D12RaytracingSimpleLighting::D3D12RaytracingSimpleLighting(UINT width, UINT he
     m_raytracingOutputResourceUAVDescriptorHeapIndex(UINT_MAX),
     m_curRotationAngleRad(0.0f),
     m_serEnabled(false),               // <— initialize here
-    m_rebuildASNextFrame(false)        // <— and here
+   // m_rebuildASNextFrame(false)        // <— and here
 {
     UpdateForSizeChange(width, height);
 }
@@ -992,11 +992,11 @@ void D3D12RaytracingSimpleLighting::OnUpdate()
 
     if (m_keyboardButtons.IsKeyPressed(Keyboard::Keys::O))
     {
-        //OutputDebugStringA("S key pressed!\n");
-        m_serEnabled = true;
-        m_rebuildASNextFrame = true;
+        OutputDebugStringA("O key pressed!\n");
+        m_serEnabled = !m_serEnabled;
+        
+        //m_rebuildASNextFrame = true;
     }
-    
 
     // Rotate the camera around Y axis.
     {
@@ -1025,13 +1025,13 @@ void D3D12RaytracingSimpleLighting::DoRaytracing()
     auto commandList = m_deviceResources->GetCommandList();
     auto frameIndex = m_deviceResources->GetCurrentFrameIndex();
 
-    if (m_rebuildASNextFrame)
-    {
+    //if (m_rebuildASNextFrame)
+    //{
         // rebuild whatever needs rebuilding when SER changes:
-        BuildAccelerationStructures();
-        BuildShaderTables();
-        m_rebuildASNextFrame = false;
-    }
+     //   BuildAccelerationStructures();
+     //   BuildShaderTables();
+     //   m_rebuildASNextFrame = false;
+    //}
 
     auto DispatchRays = [&](auto* commandList, auto* stateObject, auto* dispatchDesc)
         {
@@ -1161,11 +1161,11 @@ void D3D12RaytracingSimpleLighting::OnRender()
         return;
     }
 
-    if (m_rebuildASNextFrame)
-    {
+    //if (m_rebuildASNextFrame)
+    //{
         // Needed in cases where we intend to update an upload buffer from the CPU.
-        m_deviceResources->WaitForGpu();
-    }
+    //    m_deviceResources->WaitForGpu();
+    //}
 
     m_deviceResources->Prepare();
     DoRaytracing();
