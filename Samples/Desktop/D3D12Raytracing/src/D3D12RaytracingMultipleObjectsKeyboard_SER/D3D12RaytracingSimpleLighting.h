@@ -81,8 +81,8 @@ private:
     UINT m_descriptorSize;
 
     // UI
-    //std::unique_ptr<DirectX::SpriteBatch> m_spriteBatch;
-    //std::unique_ptr<DirectX::SpriteFont> m_smallFont;
+    std::unique_ptr<DirectX::SpriteBatch> m_spriteBatch;
+    std::unique_ptr<DirectX::SpriteFont> m_smallFont;
 
     std::unique_ptr<DirectX::Keyboard>      m_keyboard;
     DirectX::Keyboard::KeyboardStateTracker m_keyboardButtons;
@@ -138,6 +138,9 @@ private:
     XMVECTOR m_at;
     XMVECTOR m_up;
 
+    // DirectXTK objects.
+    std::unique_ptr<DirectX::GraphicsMemory>    m_graphicsMemory;
+
     void UpdateCameraMatrices();
     void InitializeScene();
     void RecreateD3D();
@@ -145,6 +148,7 @@ private:
     void CreateConstantBuffers();
     std::vector<UINT8> GenerateTextureData();
     void CreateDeviceDependentResources();
+    void CreateUIFont();
     void CreateWindowSizeDependentResources();
     void ReleaseDeviceDependentResources();
     void ReleaseWindowSizeDependentResources();
@@ -160,6 +164,7 @@ private:
     void BuildAccelerationStructures();
     void BuildShaderTables();
     void UpdateForSizeChange(UINT clientWidth, UINT clientHeight);
+    void RenderUI();
     void CopyRaytracingOutputToBackbuffer();
     void CalculateFrameStats();
     UINT AllocateDescriptor(D3D12_CPU_DESCRIPTOR_HANDLE* cpuDescriptor, UINT descriptorIndexToUse = UINT_MAX);

@@ -17,6 +17,8 @@
 #include <atlbase.h>
 #include <vector>
 
+#include "SharedCode.h"
+
 extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 717; }
 extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = u8".\\D3D12\\"; }
 
@@ -149,7 +151,7 @@ D3D12RaytracingSimpleLighting::D3D12RaytracingSimpleLighting(UINT width, UINT he
     m_raytracingOutputResourceUAVDescriptorHeapIndex(UINT_MAX),
     m_curRotationAngleRad(0.0f),
     m_serEnabled(false),               // <— initialize here
-   // m_rebuildASNextFrame(false)        // <— and here
+   m_rebuildASNextFrame(false)        // <— and here
 {
     UpdateForSizeChange(width, height);
 }
@@ -317,9 +319,52 @@ void D3D12RaytracingSimpleLighting::CreateDeviceDependentResources()
 
     // Create an output 2D texture to store the raytracing result to.
     CreateRaytracingOutputResource();
+
+    // Load fonts
+    CreateUIFont();
 }
 
+void D3D12RaytracingSimpleLighting::CreateUIFont()
+{
+    auto device = m_deviceResources->GetD3DDevice();
+    auto size = m_deviceResources->GetOutputSize();
 
+    m_graphicsMemory = std::make_unique<GraphicsMemory>(device);
+
+    ResourceUploadBatch resourceUpload(device);
+
+    resourceUpload.Begin();
+
+    {
+        RenderTargetState rtState(m_deviceResources->GetBackBufferFormat(), m_deviceResources->GetDepthBufferFormat());
+        SpriteBatchPipelineStateDescription pd(rtState);
+        m_spriteBatch = std::make_unique<SpriteBatch>(device, resourceUpload, pd);
+    }
+
+    auto uploadResourcesFinished = resourceUpload.End(m_deviceResources->GetCommandQueue());
+    uploadResourcesFinished.wait();
+
+    D3D12_CPU_DESCRIPTOR_HANDLE fontHandle = m_descriptorHeap->GetCPUDescriptorHandleForHeapStart();
+    fontHandle.ptr += (Descriptors::FONT * m_descriptorSize);
+
+    D3D12_GPU_DESCRIPTOR_HANDLE fontGpuHandle = m_descriptorHeap->GetGPUDescriptorHandleForHeapStart();
+    fontGpuHandle.ptr += (Descriptors::FONT * m_descriptorSize);
+
+
+    // Begin uploading texture resources
+    {
+        ResourceUploadBatch resourceUpload(device);
+        resourceUpload.Begin();
+
+        m_smallFont = std::make_unique<SpriteFont>(device, resourceUpload,
+            L"SegoeUI_18.spritefont",
+            fontHandle,
+            fontGpuHandle);
+
+        auto finished = resourceUpload.End(m_deviceResources->GetCommandQueue());
+        finished.wait();
+    }
+}
 
 void D3D12RaytracingSimpleLighting::SerializeAndCreateRaytracingRootSignature(D3D12_ROOT_SIGNATURE_DESC& desc, ComPtr<ID3D12RootSignature>* rootSig)
 {
@@ -990,12 +1035,12 @@ void D3D12RaytracingSimpleLighting::OnUpdate()
     auto kb = m_keyboard->GetState();
     m_keyboardButtons.Update(kb);
 
-    if (m_keyboardButtons.IsKeyPressed(Keyboard::Keys::O))
+    if (m_keyboardButtons.IsKeyPressed(Keyboard::Keys::S))
     {
-        OutputDebugStringA("O key pressed!\n");
+        OutputDebugStringA("S key pressed!\n");
         m_serEnabled = !m_serEnabled;
         
-        //m_rebuildASNextFrame = true;
+        m_rebuildASNextFrame = true;
     }
 
     // Rotate the camera around Y axis.
@@ -1027,10 +1072,10 @@ void D3D12RaytracingSimpleLighting::DoRaytracing()
 
     //if (m_rebuildASNextFrame)
     //{
-        // rebuild whatever needs rebuilding when SER changes:
-     //   BuildAccelerationStructures();
-     //   BuildShaderTables();
-     //   m_rebuildASNextFrame = false;
+      // rebuild whatever needs rebuilding when SER changes:
+    //    BuildAccelerationStructures();
+    //    BuildShaderTables();
+    //    m_rebuildASNextFrame = false;
     //}
 
     auto DispatchRays = [&](auto* commandList, auto* stateObject, auto* dispatchDesc)
@@ -1078,6 +1123,58 @@ void D3D12RaytracingSimpleLighting::UpdateForSizeChange(UINT width, UINT height)
 {
     DXSample::UpdateForSizeChange(width, height);
 }
+
+// Render the UI
+void D3D12RaytracingSimpleLighting::RenderUI()
+{
+    auto commandList = m_deviceResources->GetCommandList();
+    auto renderTarget = m_deviceResources->GetRenderTarget();
+    auto viewport = m_deviceResources->GetScreenViewport();
+    auto scissorRect = m_deviceResources->GetScissorRect();
+    auto rtvDescriptor = m_deviceResources->GetRenderTargetView();
+
+
+    // Transition render target to RENDER_TARGET state
+    D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+        renderTarget,
+        D3D12_RESOURCE_STATE_PRESENT, // or D3D12_RESOURCE_STATE_COMMON depending on your pipeline
+        D3D12_RESOURCE_STATE_RENDER_TARGET
+    );
+    commandList->ResourceBarrier(1, &barrier);
+
+
+    // Set the render target
+    commandList->OMSetRenderTargets(1, &rtvDescriptor, FALSE, nullptr);
+    commandList->RSSetViewports(1, &viewport);
+    commandList->RSSetScissorRects(1, &scissorRect);
+
+    m_spriteBatch->SetViewport(viewport);
+    m_spriteBatch->Begin(commandList);
+
+    XMFLOAT2 textPos = XMFLOAT2(30, 30);
+    XMVECTOR textColor = XMVectorSet(1, 1, 1, 1);
+
+    wchar_t buffer[256];
+
+    m_smallFont->DrawString(m_spriteBatch.get(), L"D3D12: Shader Execution Reordering - Sort on HitObject + MaterialID", textPos, textColor);
+    textPos.y += m_smallFont->GetLineSpacing() * 2;
+
+    swprintf_s(buffer, ARRAYSIZE(buffer), L"SER: %s - Press 'S'", m_serEnabled ? L"Enabled" : L"Disabled");
+    m_smallFont->DrawString(m_spriteBatch.get(), buffer, textPos, textColor);
+    textPos.y += m_smallFont->GetLineSpacing();
+
+    m_spriteBatch->End();
+
+
+    // Transition render target back to PRESENT state
+    D3D12_RESOURCE_BARRIER barrierBack = CD3DX12_RESOURCE_BARRIER::Transition(
+        renderTarget,
+        D3D12_RESOURCE_STATE_RENDER_TARGET,
+        D3D12_RESOURCE_STATE_PRESENT
+    );
+    commandList->ResourceBarrier(1, &barrierBack);
+}
+
 
 // Copy the raytracing output to the backbuffer.
 void D3D12RaytracingSimpleLighting::CopyRaytracingOutputToBackbuffer()
@@ -1161,17 +1258,19 @@ void D3D12RaytracingSimpleLighting::OnRender()
         return;
     }
 
-    //if (m_rebuildASNextFrame)
-    //{
+    if (m_rebuildASNextFrame)
+    {
         // Needed in cases where we intend to update an upload buffer from the CPU.
-    //    m_deviceResources->WaitForGpu();
-    //}
+        m_deviceResources->WaitForGpu();
+    }
 
     m_deviceResources->Prepare();
     DoRaytracing();
     CopyRaytracingOutputToBackbuffer();
+    RenderUI();
 
     m_deviceResources->Present(D3D12_RESOURCE_STATE_PRESENT);
+    m_graphicsMemory->Commit(m_deviceResources->GetCommandQueue());
 }
 
 void D3D12RaytracingSimpleLighting::OnDestroy()

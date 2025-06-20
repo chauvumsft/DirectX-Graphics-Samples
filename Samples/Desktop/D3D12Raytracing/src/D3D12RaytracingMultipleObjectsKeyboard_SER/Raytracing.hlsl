@@ -226,7 +226,7 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 
     if (g_cubeCB.materialID == 0)
     {
-        for (uint i = 0; i < 15000; ++i)
+        for (uint i = 0; i < 18000; ++i)
         {
            finalColor = sin(finalColor) + cos(finalColor) + tan(finalColor) + 1.0f;
         }
