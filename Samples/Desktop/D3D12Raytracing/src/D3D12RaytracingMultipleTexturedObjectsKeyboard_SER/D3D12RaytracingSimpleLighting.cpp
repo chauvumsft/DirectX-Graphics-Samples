@@ -219,7 +219,7 @@ void D3D12RaytracingSimpleLighting::InitializeScene()
     // Setup camera.
     {
         // Initialize the view and projection inverse matrices.
-        m_eye = { 0.0f, 15.0f, -4.0f, 1.0f };
+        m_eye = { 0.0f, 75.0f, -4.0f, 1.0f };
         m_at = { 0.0f, 0.0f, 0.0f, 1.0f };
         XMVECTOR right = { 1.0f, 0.0f, 0.0f, 0.0f };
 

@@ -23,14 +23,16 @@
 #define LIGHT_SAMPLES_HEAVY 20
 #define MAX_BOUNCES_LIGHT 1
 #define MAX_BOUNCES_HEAVY 5
-
+#define CUBE_INSTANCE_COUNT 10201 // or pass this via a constant buffer
 
 #include "RaytracingHlslCompat.h"
 using namespace dx;
 RaytracingAccelerationStructure Scene : register(t0, space0);
 RWTexture2D<float4> RenderTarget : register(u0);
-ByteAddressBuffer Indices : register(t1, space0);
-StructuredBuffer<Vertex> Vertices : register(t2, space0);
+ByteAddressBuffer IndicesCube : register(t1, space0);
+StructuredBuffer<Vertex> VerticesCube : register(t2, space0);
+ByteAddressBuffer IndicesComplex : register(t3, space0);
+StructuredBuffer<Vertex> VerticesComplex : register(t4, space0);
 
 ConstantBuffer<SceneConstantBuffer> g_sceneCB : register(b0);
 ConstantBuffer<CubeConstantBuffer> g_cubeCB : register(b1);
@@ -49,7 +51,8 @@ float CheckerboardPattern(float2 uv, float scale)
     return checker < 1.0f ? 0.0f : 1.0f;
 }
     
-// Load three 16 bit indices from a byte addressed buffer.
+// TODO: fix this for complex shapes
+// Load three 16 bit indices from a byte addressed buffer. 
 uint3 Load3x16BitIndices(uint offsetBytes)
 {
     uint3 indices;
@@ -62,7 +65,7 @@ uint3 Load3x16BitIndices(uint offsetBytes)
     //  Aligned:     { 0 1 | 2 - }
     //  Not aligned: { - 0 | 1 2 }
     const uint dwordAlignedOffset = offsetBytes & ~3;
-    const uint2 four16BitIndices = Indices.Load2(dwordAlignedOffset);
+    const uint2 four16BitIndices = IndicesCube.Load2(dwordAlignedOffset);
  
     // Aligned: { 0 1 | 2 - } => retrieve first three 16bit indices
     if (dwordAlignedOffset == offsetBytes)
@@ -194,6 +197,7 @@ void MyRaygenShader()
 [shader("closesthit")]
 void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 {
+    bool isComplex = InstanceID() >= CUBE_INSTANCE_COUNT;
     float3 hitPosition = HitWorldPosition();
 
     // Get the base index of the triangle's first 16 bit index.
@@ -203,16 +207,24 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
     uint baseIndex = PrimitiveIndex() * triangleIndexStride;
     
     // Load up 3 16 bit indices for the triangle.
-    const uint3 indices = Load3x16BitIndices(baseIndex);
-
-    // Retrieve corresponding vertex normals for the triangle vertices.
-    float3 vertexNormals[3] =
-    {
-        Vertices[indices[0]].normal,
-        Vertices[indices[1]].normal,
-        Vertices[indices[2]].normal 
-    };
+    // TODO: fix this for complex shapes
+    //const uint3 indices = Load3x16BitIndices(baseIndex);
+    uint3 indices = Load3x16BitIndices(PrimitiveIndex() * 3 * 2);
         
+    // Retrieve corresponding vertex normals for the triangle vertices.
+    float3 vertexNormals[3];
+    if (isComplex)
+    {
+        vertexNormals[0] = VerticesComplex[indices.x].normal;
+        vertexNormals[1] = VerticesComplex[indices.y].normal;
+        vertexNormals[2] = VerticesComplex[indices.z].normal;
+    }
+    else
+    {
+        vertexNormals[0] = VerticesCube[indices.x].normal;
+        vertexNormals[1] = VerticesCube[indices.y].normal;
+        vertexNormals[2] = VerticesCube[indices.z].normal;
+    }
 
     // Compute the triangle's normal.
     // This is redundant and done for illustration purposes 
@@ -229,12 +241,12 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
     float3 normal = triangleNormal;
     float3 finalColor = float3(0, 0, 0);
 
-    if (g_cubeCB.materialID == 1)
+    if (g_cubeCB.materialID == 0)
     {
         //for (uint i = 0; i < 18000; ++i)
         //{
-       //    finalColor = sin(finalColor) + cos(finalColor) + tan(finalColor) + 1.0f;
-       // }
+        //  finalColor = sin(finalColor) + cos(finalColor) + tan(finalColor) + 1.0f;
+        //}
   
         // The heavy workload test.
             float2 uv = float2(
@@ -258,7 +270,7 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
         //  float3 baseColor = lerp(float3(0, 0, 0), float3(1, 1, 1), checker);
         //  finalColor = baseColor * g_sceneCB.lightDiffuseColor.rgb * saturate(dot(normal, lightDir));
         //  sampled = float4(baseColor, 1.0f);
-        }  
+    }  
     else
     {
     // Simple diffuse for other materials
@@ -276,7 +288,5 @@ void MyMissShader(inout RayPayload payload)
     payload.color = background;
 }
     
-
-
 
 #endif // RAYTRACING_HLSL
