@@ -29,6 +29,7 @@
 using namespace dx;
 RaytracingAccelerationStructure Scene : register(t0, space0);
 RWTexture2D<float4> RenderTarget : register(u0);
+    
 ByteAddressBuffer IndicesCube : register(t1, space0);
 StructuredBuffer<Vertex> VerticesCube : register(t2, space0);
 ByteAddressBuffer IndicesComplex : register(t3, space0);
@@ -53,7 +54,7 @@ float CheckerboardPattern(float2 uv, float scale)
     
 // TODO: fix this for complex shapes
 // Load three 16 bit indices from a byte addressed buffer. 
-uint3 Load3x16BitIndices(uint offsetBytes)
+uint3 Load3x16BitIndices(uint offsetBytes, ByteAddressBuffer baf)
 {
     uint3 indices;
 
@@ -65,7 +66,7 @@ uint3 Load3x16BitIndices(uint offsetBytes)
     //  Aligned:     { 0 1 | 2 - }
     //  Not aligned: { - 0 | 1 2 }
     const uint dwordAlignedOffset = offsetBytes & ~3;
-    const uint2 four16BitIndices = IndicesCube.Load2(dwordAlignedOffset);
+    const uint2 four16BitIndices = baf.Load2(dwordAlignedOffset);
  
     // Aligned: { 0 1 | 2 - } => retrieve first three 16bit indices
     if (dwordAlignedOffset == offsetBytes)
@@ -83,6 +84,7 @@ uint3 Load3x16BitIndices(uint offsetBytes)
 
     return indices;
 }
+    
 
 
 typedef BuiltInTriangleIntersectionAttributes MyAttributes;
@@ -209,7 +211,8 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
     // Load up 3 16 bit indices for the triangle.
     // TODO: fix this for complex shapes
     //const uint3 indices = Load3x16BitIndices(baseIndex);
-    uint3 indices = Load3x16BitIndices(PrimitiveIndex() * 3 * 2);
+    
+    uint3 indices = isComplex ? Load3x16BitIndices(PrimitiveIndex() * 3 * 2, IndicesComplex) : Load3x16BitIndices(PrimitiveIndex() * 3 * 2, IndicesCube);
         
     // Retrieve corresponding vertex normals for the triangle vertices.
     float3 vertexNormals[3];

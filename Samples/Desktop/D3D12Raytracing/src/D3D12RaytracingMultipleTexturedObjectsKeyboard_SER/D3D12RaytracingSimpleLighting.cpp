@@ -754,7 +754,7 @@ void D3D12RaytracingSimpleLighting::BuildComplexGeometry()
 {
     auto device = m_deviceResources->GetD3DDevice();
     // Torus knot parameters
-    const int tubularSegments = 50000;
+    const int tubularSegments = 5000;
     const int radialSegments = 16;    // Number of segments around radius
     const float p = 2.0f;             // Number of times around the circle
     const float q = 3.0f;             // Number of times through the circle
@@ -949,7 +949,7 @@ void D3D12RaytracingSimpleLighting::BuildAccelerationStructures()
 
 
     float complexShapeZ = -15.0f;
-    float complexShapeSpacing = 1.3f;
+    float complexShapeSpacing = 2.3f;
     for (int x = -cubesPerRow / 2; x <= cubesPerRow / 2; ++x) {
         for (int z = -cubesPerRow / 2; z <= cubesPerRow / 2; ++z) {
             D3D12_RAYTRACING_INSTANCE_DESC desc = {};
