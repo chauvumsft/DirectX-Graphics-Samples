@@ -35,9 +35,11 @@ StructuredBuffer<Vertex> Vertices : register(t2, space0);
 ConstantBuffer<SceneConstantBuffer> g_sceneCB : register(b0);
 ConstantBuffer<CubeConstantBuffer> g_cubeCB : register(b1);
     
-Texture2D<float4> MaterialTexture : register(t3, space0);
+Texture2D<float4> MaterialTexture : register(t5, space0);
 SamplerState TextureSampler : register(s0);
+
     
+// Procedural checkerboard pattern function.
 float CheckerboardPattern(float2 uv, float scale)
 {
     float2 scaledUV = uv * scale;
@@ -241,14 +243,22 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
         );
         
         // Sample the texture using the procedural UVs
-            sampled = MaterialTexture.SampleLevel(TextureSampler, uv, 0);
+        sampled = MaterialTexture.SampleLevel(TextureSampler, uv, 0);
         
             
         // Calculate lighting with the texture
-            float NdotL = saturate(dot(normal, lightDir));
-            finalColor = sampled.rgb * g_sceneCB.lightDiffuseColor.rgb * NdotL;
-
-    }  
+        float NdotL = saturate(dot(normal, lightDir));
+        finalColor = sampled.rgb * g_sceneCB.lightDiffuseColor.rgb * NdotL;
+            
+        // Working checkerboard pattern
+        //  float2 uv = float2(
+        //  frac(hitPosition.x * 0.5 + 0.5),
+        //  frac(hitPosition.z * 0.5 + 0.5));
+        //  float checker = CheckerboardPattern(uv, 10.0); // Adjust scale as needed
+        //  float3 baseColor = lerp(float3(0, 0, 0), float3(1, 1, 1), checker);
+        //  finalColor = baseColor * g_sceneCB.lightDiffuseColor.rgb * saturate(dot(normal, lightDir));
+        //  sampled = float4(baseColor, 1.0f);
+        }  
     else
     {
     // Simple diffuse for other materials

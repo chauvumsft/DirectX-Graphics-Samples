@@ -305,11 +305,11 @@ void D3D12RaytracingSimpleLighting::CreateDeviceDependentResources()
     // Build geometry to be used in the sample.
     BuildGeometry();
 
-    // Create texture
-    CreateTexture();
-
     // Build complex geometry
     BuildComplexGeometry();
+
+    // Create texture
+    CreateTexture();
 
     // Build raytracing acceleration structures from the generated geometry.
     BuildAccelerationStructures();
@@ -471,7 +471,7 @@ void D3D12RaytracingSimpleLighting::CreateRootSignatures()
     {
         CD3DX12_DESCRIPTOR_RANGE ranges[2]; // Perfomance TIP: Order from most frequent to least frequent.
         ranges[0].Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0);  // 1 output texture
-        ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 4, 1);  // 2 static index and vertex buffers + 1 texture
+        ranges[1].Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 5, 1);  // 2 static index and 2 vertex buffers + 1 texture
 
         CD3DX12_ROOT_PARAMETER rootParameters[GlobalRootSignatureParams::Count];
         rootParameters[GlobalRootSignatureParams::OutputViewSlot].InitAsDescriptorTable(1, &ranges[0]);
@@ -661,13 +661,13 @@ void D3D12RaytracingSimpleLighting::CreateDescriptorHeap()
     auto device = m_deviceResources->GetD3DDevice();
 
     D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = {};
-    // Allocate a heap for 7 descriptors:
+    // Allocate a heap for 6 descriptors:
     // 2 - vertex and index buffer SRVs for cube
     // 2 - vertex and index buffer SRVs for complex shape
     // 1 - raytracing output texture UAV
     // 1 - texture SRV
-    // 1 - font descriptor (Descriptors::FONT)
-    descriptorHeapDesc.NumDescriptors = 7;
+
+    descriptorHeapDesc.NumDescriptors = 6;
     descriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
     descriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
     descriptorHeapDesc.NodeMask = 0;
