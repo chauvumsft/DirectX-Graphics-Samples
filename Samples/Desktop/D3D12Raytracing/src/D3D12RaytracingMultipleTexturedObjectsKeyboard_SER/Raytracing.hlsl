@@ -84,8 +84,6 @@ uint3 Load3x16BitIndices(uint offsetBytes, ByteAddressBuffer baf)
 
     return indices;
 }
-    
-
 
 typedef BuiltInTriangleIntersectionAttributes MyAttributes;
     
@@ -173,7 +171,7 @@ void MyRaygenShader()
         uint materialID = hit.LoadLocalRootTableConstant(16);
         uint hintBits = 1;
         
-        dx::MaybeReorderThread(materialID, 1);
+        dx::MaybeReorderThread(hit);
         HitObject::Invoke(hit, payload);
     }
     else
@@ -246,10 +244,6 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 
     if (g_cubeCB.materialID == 0)
     {
-        //for (uint i = 0; i < 18000; ++i)
-        //{
-        //  finalColor = sin(finalColor) + cos(finalColor) + tan(finalColor) + 1.0f;
-        //}
   
         // The heavy workload test.
             float2 uv = float2(
@@ -258,21 +252,20 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
         );
         
         // Sample the texture using the procedural UVs
+
         sampled = MaterialTexture.SampleLevel(TextureSampler, uv, 0);
         
             
         // Calculate lighting with the texture
         float NdotL = saturate(dot(normal, lightDir));
         finalColor = sampled.rgb * g_sceneCB.lightDiffuseColor.rgb * NdotL;
-            
-        // Working checkerboard pattern
-        //  float2 uv = float2(
-        //  frac(hitPosition.x * 0.5 + 0.5),
-        //  frac(hitPosition.z * 0.5 + 0.5));
-        //  float checker = CheckerboardPattern(uv, 10.0); // Adjust scale as needed
-        //  float3 baseColor = lerp(float3(0, 0, 0), float3(1, 1, 1), checker);
-        //  finalColor = baseColor * g_sceneCB.lightDiffuseColor.rgb * saturate(dot(normal, lightDir));
-        //  sampled = float4(baseColor, 1.0f);
+        
+        // Artficial workload for the heavy workload test.
+        //for (uint i = 0; i < 5000; ++i)
+        //{
+        //  finalColor = sin(finalColor) + cos(finalColor);
+        //}
+           
     }  
     else
     {

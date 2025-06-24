@@ -219,7 +219,7 @@ void D3D12RaytracingSimpleLighting::InitializeScene()
     // Setup camera.
     {
         // Initialize the view and projection inverse matrices.
-        m_eye = { 0.0f, 75.0f, -4.0f, 1.0f };
+        m_eye = { 0.0f, 15.0f, -4.0f, 1.0f };
         m_at = { 0.0f, 0.0f, 0.0f, 1.0f };
         XMVECTOR right = { 1.0f, 0.0f, 0.0f, 0.0f };
 
@@ -926,7 +926,7 @@ void D3D12RaytracingSimpleLighting::BuildAccelerationStructures()
     ComPtr<ID3D12Resource> instanceDescsResource;
     std::vector<D3D12_RAYTRACING_INSTANCE_DESC> instanceDesc;
     int cubesPerRow = 100;     // Cubes per row along X and Z axes
-    float cubeSpacing = 2.2f; // Spacing between cubes
+    float cubeSpacing = 2.0f; // Spacing between cubes
 
     // Loop through each position in the XZ plane to create cubes
     for (int x = -cubesPerRow / 2; x <= cubesPerRow / 2; ++x) {
@@ -949,7 +949,7 @@ void D3D12RaytracingSimpleLighting::BuildAccelerationStructures()
 
 
     float complexShapeZ = -15.0f;
-    float complexShapeSpacing = 2.3f;
+    float complexShapeSpacing = 2.0f;
     for (int x = -cubesPerRow / 2; x <= cubesPerRow / 2; ++x) {
         for (int z = -cubesPerRow / 2; z <= cubesPerRow / 2; ++z) {
             D3D12_RAYTRACING_INSTANCE_DESC desc = {};
