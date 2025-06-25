@@ -150,8 +150,7 @@ D3D12RaytracingSimpleLighting::D3D12RaytracingSimpleLighting(UINT width, UINT he
     DXSample(width, height, name),
     m_raytracingOutputResourceUAVDescriptorHeapIndex(UINT_MAX),
     m_curRotationAngleRad(0.0f),
-    m_serEnabled(false),               // <— initialize here
-   m_rebuildASNextFrame(false)        // <— and here
+    m_serEnabled(false)               
 {
     UpdateForSizeChange(width, height);
 }
@@ -208,18 +207,10 @@ void D3D12RaytracingSimpleLighting::UpdateCameraMatrices()
 void D3D12RaytracingSimpleLighting::InitializeScene()
 {
     auto frameIndex = m_deviceResources->GetCurrentFrameIndex();
-
-    // Setup materials.
-    //{
-    //    m_cubeCB.albedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-    //    m_secondCubeCB.albedo = XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f);
-    //    m_complexShapeCB.albedo = XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f);
-    //}
-
     // Setup camera.
     {
         // Initialize the view and projection inverse matrices.
-        m_eye = { 0.0f, 15.0f, -4.0f, 1.0f };
+        m_eye = { 0.0f, 65.0f, -4.0f, 1.0f };
         m_at = { 0.0f, 0.0f, 0.0f, 1.0f };
         XMVECTOR right = { 1.0f, 0.0f, 0.0f, 0.0f };
 
@@ -305,7 +296,7 @@ void D3D12RaytracingSimpleLighting::CreateDeviceDependentResources()
     // Build geometry to be used in the sample.
     BuildGeometry();
 
-    // Build complex geometry
+	// Build complex geometry (the torus knot to illustrate the use of multiple geometries in the scene)
     BuildComplexGeometry();
 
     // Create texture
@@ -407,7 +398,7 @@ void D3D12RaytracingSimpleLighting::CreateTexture()
     m_textureSrvGpuDescriptor = CD3DX12_GPU_DESCRIPTOR_HANDLE(
         m_descriptorHeap->GetGPUDescriptorHandleForHeapStart(),
         descriptorIndex,
-        m_descriptorSize); // this goes to t3
+        m_descriptorSize);
 }
 
 void D3D12RaytracingSimpleLighting::CreateUIFont()
@@ -478,8 +469,6 @@ void D3D12RaytracingSimpleLighting::CreateRootSignatures()
         rootParameters[GlobalRootSignatureParams::AccelerationStructureSlot].InitAsShaderResourceView(0);
         rootParameters[GlobalRootSignatureParams::SceneConstantSlot].InitAsConstantBufferView(0);
         rootParameters[GlobalRootSignatureParams::VertexBuffersSlot].InitAsDescriptorTable(1, &ranges[1]);
-        //CD3DX12_ROOT_SIGNATURE_DESC globalRootSignatureDesc(ARRAYSIZE(rootParameters), rootParameters);
-        //SerializeAndCreateRaytracingRootSignature(globalRootSignatureDesc, &m_raytracingGlobalRootSignature);
 
         // Static sampler
         D3D12_STATIC_SAMPLER_DESC sampler = {};
@@ -493,12 +482,12 @@ void D3D12RaytracingSimpleLighting::CreateRootSignatures()
         sampler.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
         sampler.MinLOD = 0.0f;
         sampler.MaxLOD = D3D12_FLOAT32_MAX;
-        sampler.ShaderRegister = 0; // This maps to register(s0) in the shader
+        sampler.ShaderRegister = 0; 
         sampler.RegisterSpace = 0;
         sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 
         CD3DX12_ROOT_SIGNATURE_DESC globalRootSignatureDesc(ARRAYSIZE(rootParameters), rootParameters,
-            1, &sampler);  // Add the static sampler
+            1, &sampler); 
         SerializeAndCreateRaytracingRootSignature(globalRootSignatureDesc, &m_raytracingGlobalRootSignature);
     }
 
@@ -754,8 +743,8 @@ void D3D12RaytracingSimpleLighting::BuildComplexGeometry()
 {
     auto device = m_deviceResources->GetD3DDevice();
     // Torus knot parameters
-    const int tubularSegments = 5000;
-    const int radialSegments = 16;    // Number of segments around radius
+    const int tubularSegments = 7000;
+    const int radialSegments = 42;    // Number of segments around radius
     const float p = 2.0f;             // Number of times around the circle
     const float q = 3.0f;             // Number of times through the circle
     const float radius = 1.0f;        // Radius of entire knot
@@ -779,7 +768,6 @@ void D3D12RaytracingSimpleLighting::BuildComplexGeometry()
             float y = (radius + tubeRadius * cos(v)) * sin(q * u);
             float z = tubeRadius * sin(v) + sin(p * u) * 0.5f;
             // Calculate normals using partial derivatives
-            // This is a simplified approach - real implementation would use proper normal calculation
             float nx = cos(v) * cos(q * u);
             float ny = cos(v) * sin(q * u);
             float nz = sin(v);
@@ -928,7 +916,7 @@ void D3D12RaytracingSimpleLighting::BuildAccelerationStructures()
     int cubesPerRow = 100;     // Cubes per row along X and Z axes
     float cubeSpacing = 2.0f; // Spacing between cubes
 
-    // Loop through each position in the XZ plane to create cubes
+    // Loop through each position in the XZ plane to create cubes and complex shapes.
     for (int x = -cubesPerRow / 2; x <= cubesPerRow / 2; ++x) {
         for (int z = -cubesPerRow / 2; z <= cubesPerRow / 2; ++z) {
             D3D12_RAYTRACING_INSTANCE_DESC desc = {};
@@ -949,7 +937,7 @@ void D3D12RaytracingSimpleLighting::BuildAccelerationStructures()
 
 
     float complexShapeZ = -15.0f;
-    float complexShapeSpacing = 2.0f;
+    float complexShapeSpacing = 1.7f;
     for (int x = -cubesPerRow / 2; x <= cubesPerRow / 2; ++x) {
         for (int z = -cubesPerRow / 2; z <= cubesPerRow / 2; ++z) {
             D3D12_RAYTRACING_INSTANCE_DESC desc = {};
@@ -968,46 +956,7 @@ void D3D12RaytracingSimpleLighting::BuildAccelerationStructures()
         }
     }
 
-
-    //for (int i = 0; i < 20; ++i) {
-    //    D3D12_RAYTRACING_INSTANCE_DESC desc = {};
-    //    desc.Transform[0][0] = desc.Transform[1][1] = desc.Transform[2][2] = 1.0f;
-    //    // Spread shapes 
-    //    int row = i / cubesPerRow;
-    //    int col = i % cubesPerRow;
-    //    desc.Transform[0][3] = (col - (cubesPerRow / 2)) * cubeSpacing;
-    //    desc.Transform[1][3] = 0.0f;
-    //    desc.Transform[2][3] = complexShapeZ + (row - 0.5f) * cubeSpacing;
-    //    desc.InstanceMask = 1;
-    //    desc.AccelerationStructure = m_bottomLevelAccelerationStructureComplex->GetGPUVirtualAddress();
-    //    desc.InstanceID = 10 + i;
-    //    instanceDesc.push_back(desc);
-    //}
-
     AllocateUploadBuffer(device, instanceDesc.data(), instanceDesc.size() * sizeof(D3D12_RAYTRACING_INSTANCE_DESC), &instanceDescsResource, L"InstanceDesc");
-
-    // This is a more literal version of the instance desc creation without the loop.
-    // D3D12_RAYTRACING_INSTANCE_DESC instanceDesc[10] = {};
-    //// First cube - centered at origin
-    //instanceDesc[0].Transform[0][0] = instanceDesc[0].Transform[1][1] = instanceDesc[0].Transform[2][2] = 1;
-    //instanceDesc[0].InstanceMask = 1;
-    //instanceDesc[0].AccelerationStructure = m_bottomLevelAccelerationStructureCube->GetGPUVirtualAddress();
-    //instanceDesc[0].InstanceID = 0;
-
-    //// Second cube - shifted to the right
-    //instanceDesc[1].Transform[0][0] = instanceDesc[1].Transform[1][1] = instanceDesc[1].Transform[2][2] = 1;
-    //instanceDesc[1].Transform[0][3] = 3.0f;
-    //instanceDesc[1].InstanceMask = 1;
-    //instanceDesc[1].AccelerationStructure = m_bottomLevelAccelerationStructureCube->GetGPUVirtualAddress();
-    //instanceDesc[1].InstanceID = 1;
-
-    ////// Complex shape - shifted to the left (-x)
-    //instanceDesc[2].Transform[0][0] = instanceDesc[2].Transform[1][1] = instanceDesc[2].Transform[2][2] = 1;
-    //instanceDesc[2].Transform[0][3] =-3.0f;
-    //instanceDesc[2].InstanceMask = 1;
-    //instanceDesc[2].AccelerationStructure = m_bottomLevelAccelerationStructureComplex->GetGPUVirtualAddress();
-    //instanceDesc[2].InstanceID = 2;
-    // AllocateUploadBuffer(device, &instanceDesc, sizeof(instanceDesc), &instanceDescsResource, L"InstanceDescs");
 
     // Build bottom-level acceleration structures for cube
     D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC cubeBLASDesc = {};
@@ -1109,7 +1058,7 @@ void D3D12RaytracingSimpleLighting::BuildShaderTables()
         for (int i = 0; i < 10201; ++i) {
             RootArguments argument;
             argument.cb = m_cubeCB;
-            argument.cb.albedo = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.1f); // 16 bytes (4 floats × 4 bytes)
+            argument.cb.albedo = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f); // 16 bytes (4 floats × 4 bytes)
             argument.cb.materialID = 0;
             hitGroupShaderTable.push_back(ShaderRecord(
 
@@ -1119,7 +1068,7 @@ void D3D12RaytracingSimpleLighting::BuildShaderTables()
         for (int i = 0; i < 10201; ++i) {
             RootArguments argument;
             argument.cb = m_complexShapeCB;
-            argument.cb.albedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 0.1f); // 16 bytes (4 floats × 4 bytes)
+            argument.cb.albedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); // 16 bytes (4 floats × 4 bytes)
             argument.cb.materialID = 1;
             hitGroupShaderTable.push_back(ShaderRecord(
 
@@ -1147,8 +1096,6 @@ void D3D12RaytracingSimpleLighting::OnUpdate()
     {
         OutputDebugStringA("S key pressed!\n");
         m_serEnabled = !m_serEnabled;
-        
-        m_rebuildASNextFrame = true;
     }
 
     // Rotate the camera around Y axis.
@@ -1177,14 +1124,6 @@ void D3D12RaytracingSimpleLighting::DoRaytracing()
 {
     auto commandList = m_deviceResources->GetCommandList();
     auto frameIndex = m_deviceResources->GetCurrentFrameIndex();
-
-    //if (m_rebuildASNextFrame)
-    //{
-      // rebuild whatever needs rebuilding when SER changes:
-    //    BuildAccelerationStructures();
-    //    BuildShaderTables();
-    //    m_rebuildASNextFrame = false;
-    //}
 
     auto DispatchRays = [&](auto* commandList, auto* stateObject, auto* dispatchDesc)
         {
@@ -1364,12 +1303,6 @@ void D3D12RaytracingSimpleLighting::OnRender()
     if (!m_deviceResources->IsWindowVisible())
     {
         return;
-    }
-
-    if (m_rebuildASNextFrame)
-    {
-        // Needed in cases where we intend to update an upload buffer from the CPU.
-        m_deviceResources->WaitForGpu();
     }
 
     m_deviceResources->Prepare();
