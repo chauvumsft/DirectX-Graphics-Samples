@@ -23,9 +23,9 @@
 // - 4K, 2080Ti, 9x9 kernel: 0.37ms (separable) -> 0.305 ms (separable + wave intrinsics)
 
 #define HLSL
-#include "RaytracingHlslCompat.h"
-#include "RaytracingShaderHelper.hlsli"
-#include "RTAO/Shaders/RTAO.hlsli"
+#include "../../../RaytracingHlslCompat.h"
+#include "../RaytracingShaderHelper.hlsli"
+#include "../RTAO.hlsli"
 
 Texture2D<float> g_inValue : register(t0);
 RWTexture2D<float2> g_outMeanVariance : register(u0);

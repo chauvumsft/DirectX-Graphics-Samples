@@ -22,9 +22,9 @@
 //  - WaveReadLaneAt() with any to any to wave read lane support.
 
 #define HLSL
-#include "RaytracingHlslCompat.h"
-#include "RaytracingShaderHelper.hlsli"
-#include "RTAO/Shaders/RTAO.hlsli"
+#include "../../../RaytracingHlslCompat.h"
+#include "../../../RTAO/Shaders/RaytracingShaderHelper.hlsli"
+#include "../../../RTAO/Shaders/RTAO.hlsli"
 
 #define GAUSSIAN_KERNEL_3X3
 #include "Kernels.hlsli"

@@ -15,11 +15,12 @@
 // Remove /Zpr and use column-major? It might be slightly faster
 
 #define HLSL
-#include "RaytracingHlslCompat.h"
-#include "RaytracingShaderHelper.hlsli"
-#include "RandomNumberGenerator.hlsli"
-#include "AnalyticalTextures.hlsli"
+#include "..\..\RaytracingHlslCompat.h"
+#include "..\..\RTAO\Shaders\RaytracingShaderHelper.hlsli"
+#include "..\..\RTAO\Shaders\RandomNumberGenerator.hlsli"
+#include "util\AnalyticalTextures.hlsli"
 #include "BxDF.hlsli"
+using namespace dx; // dx::HitObject and dx::MaybeReorderThread
 
 //***************************************************************************
 //*****------ Shader resources bound via root signatures -------*************
@@ -100,14 +101,22 @@ bool TraceShadowRayAndReportIfHit(inout float tHit, in Ray ray, in UINT currentR
     {
         rayFlags |= RAY_FLAG_SKIP_CLOSEST_HIT_SHADER; 
     }
-
-    TraceRay(g_scene,
+                                                    
+                                                    
+    //#if defined(__RAYGEN__)
+     TraceRay(g_scene,
         rayFlags,
         TraceRayParameters::InstanceMask,
         TraceRayParameters::HitGroup::Offset[PathtracerRayType::Shadow],
         TraceRayParameters::HitGroup::GeometryStride,
         TraceRayParameters::MissShader::Offset[PathtracerRayType::Shadow],
         rayDesc, shadowPayload);
+                                                
+        //dx::MaybeReorderThread(hit);
+        //HitObject::Invoke(hit, shadowPayload);
+    //#endif
+
+    
     
     // Report a hit if Miss Shader didn't set the value to HitDistanceOnMiss.
     tHit = shadowPayload.tHit;
@@ -133,6 +142,48 @@ bool TraceShadowRayAndReportIfHit(in float3 hitPosition, in float3 direction, in
     return TraceShadowRayAndReportIfHit(dummyTHit, visibilityRay, N, rayPayload.rayRecursionDepth, false, TMax);
 }
 
+PathtracerRayPayload TraceRadianceRay_Raygen(in Ray ray, in UINT currentRayRecursionDepth, float tMin = NEAR_PLANE, float tMax = FAR_PLANE, float bounceContribution = 1, bool cullNonOpaque = false)
+{
+    PathtracerRayPayload rayPayload;
+    rayPayload.rayRecursionDepth = currentRayRecursionDepth + 1;
+    rayPayload.radiance = 0;
+    rayPayload.AOGBuffer.tHit = HitDistanceOnMiss;
+    rayPayload.AOGBuffer.hitPosition = 0;
+    rayPayload.AOGBuffer.diffuseByte3 = 0;
+    rayPayload.AOGBuffer.encodedNormal = 0;
+    rayPayload.AOGBuffer._virtualHitPosition = 0;
+    rayPayload.AOGBuffer._encodedNormal = 0; 
+
+    if (currentRayRecursionDepth >= g_cb.maxRadianceRayRecursionDepth)
+    {
+        rayPayload.radiance = float3(133, 161, 179) / 255.0;
+        return rayPayload;
+    }
+
+    // Set the ray's extents.
+    RayDesc rayDesc;
+    rayDesc.Origin = ray.origin;
+    rayDesc.Direction = ray.direction;
+    rayDesc.TMin = tMin;
+    rayDesc.TMax = tMax;
+
+    UINT rayFlags = (cullNonOpaque ? RAY_FLAG_CULL_NON_OPAQUE : 0); 
+                                                    
+    //#if defined(__RAYGEN__)
+        HitObject hit = HitObject::TraceRay(g_scene,
+               rayFlags,
+		        TraceRayParameters::InstanceMask,
+		        TraceRayParameters::HitGroup::Offset[PathtracerRayType::Radiance],
+		        TraceRayParameters::HitGroup::GeometryStride,
+		        TraceRayParameters::MissShader::Offset[PathtracerRayType::Radiance],
+		        rayDesc, rayPayload);
+            dx::MaybeReorderThread(hit);
+            HitObject::Invoke(hit, rayPayload);
+    //#endif
+
+	return rayPayload;
+}
+                                                
 PathtracerRayPayload TraceRadianceRay(in Ray ray, in UINT currentRayRecursionDepth, float tMin = NEAR_PLANE, float tMax = FAR_PLANE, float bounceContribution = 1, bool cullNonOpaque = false)
 {
     PathtracerRayPayload rayPayload;
@@ -160,13 +211,14 @@ PathtracerRayPayload TraceRadianceRay(in Ray ray, in UINT currentRayRecursionDep
 
     UINT rayFlags = (cullNonOpaque ? RAY_FLAG_CULL_NON_OPAQUE : 0); 
 
-	TraceRay(g_scene,
-        rayFlags,
+    TraceRay(g_scene,
+       rayFlags,
 		TraceRayParameters::InstanceMask,
 		TraceRayParameters::HitGroup::Offset[PathtracerRayType::Radiance],
 		TraceRayParameters::HitGroup::GeometryStride,
 		TraceRayParameters::MissShader::Offset[PathtracerRayType::Radiance],
 		rayDesc, rayPayload);
+
 
 	return rayPayload;
 }
@@ -369,7 +421,7 @@ void MyRayGenShader_RadianceRay()
 
 	// Cast a ray into the scene and retrieve GBuffer information.
 	UINT currentRayRecursionDepth = 0;
-    PathtracerRayPayload rayPayload = TraceRadianceRay(ray, currentRayRecursionDepth);
+    PathtracerRayPayload rayPayload = TraceRadianceRay_Raygen(ray, currentRayRecursionDepth);
 
     // Invalidate perfect mirror reflections that missed. 
     // There is no We don't need to calculate AO for those.

@@ -13,9 +13,9 @@
 // with values reprojected from previous frame in stage 1.
 
 #define HLSL
-#include "RaytracingHlslCompat.h"
-#include "RaytracingShaderHelper.hlsli"
-#include "RTAO\Shaders\RTAO.hlsli"
+#include "../../../RaytracingHlslCompat.h"
+#include "../../../RTAO/Shaders/RaytracingShaderHelper.hlsli"
+#include "../../../RTAO/Shaders/RTAO.hlsli"
 
 Texture2D<float> g_inCurrentFrameValue : register(t0);
 Texture2D<float2> g_inCurrentFrameLocalMeanVariance : register(t1);

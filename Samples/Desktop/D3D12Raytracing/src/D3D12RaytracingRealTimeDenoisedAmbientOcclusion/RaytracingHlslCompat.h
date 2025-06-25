@@ -63,7 +63,7 @@ namespace DefaultComputeShaderParams {
 
 
 #ifdef HLSL
-#include "HlslCompat.hlsli"
+#include "SampleCore\Shaders\HlslCompat.hlsli"
 typedef UINT Index;
 #else
 using namespace DirectX;
@@ -97,18 +97,37 @@ struct AmbientOcclusionGBuffer
     XMFLOAT2 _encodedNormal;        // surface normal in the previous frame
 };
 
+#ifdef HLSL
+struct [raypayload] PathtracerRayPayload
+{
+    UINT rayRecursionDepth : read(caller, closesthit) : write(caller);
+    XMFLOAT3 radiance : read(caller) : write(closesthit, miss);
+    AmbientOcclusionGBuffer AOGBuffer: read(caller) : write(closesthit);
+};
+
+
+struct [raypayload] ShadowRayPayload
+{
+    //float tHit;         // Hit time <0,..> on Hit. -1 on miss.
+    float tHit : write(caller, closesthit, miss) : read(caller);
+};
+#else // HLSL
 
 struct PathtracerRayPayload
 {
     UINT rayRecursionDepth;
-    XMFLOAT3 radiance;              // TODO encode
+    XMFLOAT3 radiance;
     AmbientOcclusionGBuffer AOGBuffer;
 };
 
+
 struct ShadowRayPayload
 {
-    float tHit;         // Hit time <0,..> on Hit. -1 on miss.
+    //float tHit;         // Hit time <0,..> on Hit. -1 on miss.
+    float tHit;
 };
+#endif
+
 
 struct AtrousWaveletTransformFilterConstantBuffer
 {

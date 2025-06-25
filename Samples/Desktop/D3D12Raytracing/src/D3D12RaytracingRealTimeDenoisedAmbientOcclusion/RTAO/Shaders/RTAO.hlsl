@@ -13,7 +13,7 @@
 #define RAYTRACING_HLSL
 
 #define HLSL
-#include "RaytracingHlslCompat.h"
+#include "..\..\RaytracingHlslCompat.h"
 #include "RaytracingShaderHelper.hlsli"
 #include "RandomNumberGenerator.hlsli"
 #include "Ray Sorting/RaySorting.hlsli"
@@ -34,6 +34,7 @@ StructuredBuffer<AlignedHemisphereSample3D> g_sampleSets : register(t4);
 
 // Delay the include so that resource references resolve.
 #include "RayGen.hlsli"
+using namespace dx; // dx::HitObject and dx::MaybeReorderThread
 
 //***************************************************************************
 //*********************------ TraceRay wrappers. -------*********************
@@ -61,15 +62,20 @@ bool TraceAORayAndReportIfHit(out float tHit, in Ray ray, in float TMax, in floa
 
     UINT rayFlags =
         // Ignore transparent surfaces for occlusion testing.
-        RAY_FLAG_CULL_NON_OPAQUE;        
+        RAY_FLAG_CULL_NON_OPAQUE; 
+   
 
-    TraceRay(g_scene,
+    HitObject hit = HitObject::TraceRay(g_scene,
         rayFlags,
         RTAOTraceRayParameters::InstanceMask,
         RTAOTraceRayParameters::HitGroup::Offset[RTAORayType::AO],
         RTAOTraceRayParameters::HitGroup::GeometryStride,
         RTAOTraceRayParameters::MissShader::Offset[RTAORayType::AO],
         rayDesc, shadowPayload);
+        
+    dx::MaybeReorderThread(hit);
+    HitObject::Invoke(hit, shadowPayload);
+    
     
     tHit = shadowPayload.tHit;
 

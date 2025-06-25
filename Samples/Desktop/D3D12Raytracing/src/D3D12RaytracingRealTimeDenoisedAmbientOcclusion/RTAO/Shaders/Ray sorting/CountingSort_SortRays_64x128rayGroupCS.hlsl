@@ -77,9 +77,9 @@
 
 
 #define HLSL
-#include "RaytracingHlslCompat.h"
-#include "RaytracingShaderHelper.hlsli"
-#include "Ray Sorting/RaySorting.hlsli"
+#include "../../../RaytracingHlslCompat.h"
+#include "../../../RTAO/Shaders/RaytracingShaderHelper.hlsli"
+#include "../../../RTAO/Shaders/Ray Sorting/RaySorting.hlsli"
 
 Texture2D<NormalDepthTexFormat> g_inRayDirectionOriginDepth : register(t0);    // R11G11B10 texture. Note that this format doesn't store negative values.
 

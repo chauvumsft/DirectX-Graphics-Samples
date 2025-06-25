@@ -42,7 +42,7 @@
 //
 //**********************************************************************************************
 
-#include "RaytracingShaderHelper.hlsli"
+#include "..\..\..\RTAO\Shaders\RaytracingShaderHelper.hlsli"
 
 // Analytically integrated checkerboard (box filter).
 float CheckersTextureBoxFilter(in float2 uv, in float2 dpdx, in float2 dpdy)

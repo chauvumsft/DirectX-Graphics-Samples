@@ -11,8 +11,8 @@
 #ifndef RAYTRACINGSHADERHELPER_H
 #define RAYTRACINGSHADERHELPER_H
 
-#include "RayTracingHlslCompat.h"
-#include "RTAO/Shaders/RTAO.hlsli"
+#include "..\..\RayTracingHlslCompat.h"
+#include "RTAO.hlsli"
 
 #define INFINITY (1.0/0.0)
 

@@ -12,7 +12,7 @@
 #ifndef CROSSBILATERALWEIGHTS_HLSLI
 #define CROSSBILATERALWEIGHTS_HLSLI
 
-#include "RaytracingShaderHelper.hlsli"
+#include "../../../RTAO/Shaders/RaytracingShaderHelper.hlsli"
 
 namespace CrossBilateral
 {

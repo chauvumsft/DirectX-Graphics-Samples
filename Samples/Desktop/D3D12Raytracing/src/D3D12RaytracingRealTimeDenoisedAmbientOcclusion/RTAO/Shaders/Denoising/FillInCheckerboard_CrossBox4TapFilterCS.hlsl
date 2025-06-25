@@ -14,9 +14,9 @@
 // it scales Y coordinate by 2 to process only the inactive pixels in the checkerboard filled input.
 
 #define HLSL
-#include "RaytracingHlslCompat.h"
-#include "RaytracingShaderHelper.hlsli"
-#include "RTAO/Shaders/RTAO.hlsli"
+#include "../../../RaytracingHlslCompat.h"
+#include "../../../RTAO/Shaders/RaytracingShaderHelper.hlsli"
+#include "../../../RTAO/Shaders/RTAO.hlsli"
 
 RWTexture2D<float2> g_inOutValues : register(u0);
 

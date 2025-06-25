@@ -16,10 +16,10 @@
 // Ref: [RTGCH19] Ray Tracing Gems (Ch 19)
 
 #define HLSL
-#include "RaytracingHlslCompat.h"
-#include "RaytracingShaderHelper.hlsli"
-#include "Kernels.hlsli"
-#include "RTAO/Shaders/RTAO.hlsli"
+#include "../../../RaytracingHlslCompat.h"
+#include "../../../RTAO/Shaders/RaytracingShaderHelper.hlsli"
+#include "../../../RTAO/Shaders/Denoising/Kernels.hlsli"
+#include "../../../RTAO/Shaders/RTAO.hlsli"
 
 
 Texture2D<float> g_inValue : register(t0);

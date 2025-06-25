@@ -15,7 +15,7 @@
 //  - generates 1 spp for every other pixel in a checkerboard distribution.
 
 #define HLSL
-#include "RaytracingHlslCompat.h"
+#include "../../RaytracingHlslCompat.h"
 #include "RaytracingShaderHelper.hlsli"
 #include "RandomNumberGenerator.hlsli"
 #include "Ray sorting/RaySorting.hlsli"

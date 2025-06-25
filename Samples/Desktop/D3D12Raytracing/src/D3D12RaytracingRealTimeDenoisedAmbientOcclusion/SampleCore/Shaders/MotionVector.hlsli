@@ -13,7 +13,7 @@
 #ifndef MOTIONVECTOR_HLSL
 #define MOTIONVECTOR_HLSL
 
-#include "RaytracingShaderHelper.hlsli"
+#include "..\..\RTAO\Shaders\RaytracingShaderHelper.hlsli"
 
 float GetPlaneConstant(in float3 planeNormal, in float3 pointOnThePlane)
 {

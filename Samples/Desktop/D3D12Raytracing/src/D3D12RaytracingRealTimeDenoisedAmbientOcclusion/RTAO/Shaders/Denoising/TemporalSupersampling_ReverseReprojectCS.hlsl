@@ -13,10 +13,11 @@
 // If no valid values have been retrieved from the cache, the tspp is set to 0.
 
 #define HLSL
-#include "RaytracingHlslCompat.h"
-#include "RaytracingShaderHelper.hlsli"
-#include "RTAO\Shaders\RTAO.hlsli"
-#include "CrossBilateralWeights.hlsli"
+#include "../../../RaytracingHlslCompat.h"
+#include "../../../RTAO/Shaders/RaytracingShaderHelper.hlsli"
+#include "../../../RTAO/Shaders/RTAO.hlsli"
+#include "../../../RTAO/Shaders/Denoising/CrossBilateralWeights.hlsli"
+#include "../../../RTAO/Shaders/Denoising/CrossBilateralWeights.hlsli"
 
 Texture2D<NormalDepthTexFormat> g_inCurrentFrameNormalDepth : register(t0);
 Texture2D<float2> g_inCurrentFrameLinearDepthDerivative : register(t1);

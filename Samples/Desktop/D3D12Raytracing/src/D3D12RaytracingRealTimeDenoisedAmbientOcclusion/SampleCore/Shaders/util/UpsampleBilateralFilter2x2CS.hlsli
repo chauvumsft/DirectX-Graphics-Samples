@@ -10,9 +10,9 @@
 //*********************************************************
 
 #define HLSL
-#include "RaytracingHlslCompat.h"
-#include "RaytracingShaderHelper.hlsli"
-#include "Denoising/CrossBilateralWeights.hlsli"
+#include "../../../RaytracingHlslCompat.h"
+#include "../../../RTAO/Shaders/RaytracingShaderHelper.hlsli"
+#include "../../../RTAO/Shaders/Denoising/CrossBilateralWeights.hlsli"
 
 Texture2D<ValueType> g_inValue : register(t0);
 Texture2D<NormalDepthTexFormat> g_inLowResNormalDepth : register(t1);

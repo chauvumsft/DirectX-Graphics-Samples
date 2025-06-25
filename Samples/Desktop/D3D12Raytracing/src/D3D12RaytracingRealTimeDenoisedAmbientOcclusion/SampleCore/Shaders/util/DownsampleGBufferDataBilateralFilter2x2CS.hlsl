@@ -10,8 +10,8 @@
 //*********************************************************
 
 #define HLSL
-#include "RaytracingHlslCompat.h"
-#include "RaytracingShaderHelper.hlsli"
+#include "../../../RaytracingHlslCompat.h"
+#include "../../../RTAO/Shaders/RaytracingShaderHelper.hlsli"
 
 Texture2D<float4> g_inNormalDepth : register(t1);
 Texture2D<float4> g_inHitPosition : register(t2);

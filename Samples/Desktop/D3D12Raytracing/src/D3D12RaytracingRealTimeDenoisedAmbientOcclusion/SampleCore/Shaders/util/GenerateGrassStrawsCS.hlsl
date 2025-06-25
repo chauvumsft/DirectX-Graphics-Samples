@@ -38,8 +38,8 @@
 //**********************************************************************************************
 
 #define HLSL
-#include "RaytracingHlslCompat.h"
-#include "RandomNumberGenerator.hlsli"
+#include "../../../RaytracingHlslCompat.h"
+#include "../../../RTAO/Shaders/RandomNumberGenerator.hlsli"
 
 Texture2D<float4> g_windMap : register(t0);
 RWStructuredBuffer<VertexPositionNormalTextureTangent> g_outVertexBuffer : register(u0);

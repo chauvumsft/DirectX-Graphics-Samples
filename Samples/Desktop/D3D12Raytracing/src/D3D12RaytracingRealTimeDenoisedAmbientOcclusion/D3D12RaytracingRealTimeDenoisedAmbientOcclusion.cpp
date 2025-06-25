@@ -53,6 +53,9 @@ D3D12RaytracingRealTimeDenoisedAmbientOcclusion::D3D12RaytracingRealTimeDenoised
 
 void D3D12RaytracingRealTimeDenoisedAmbientOcclusion::OnInit()
 {
+    UUID Features[] = { D3D12ExperimentalShaderModels };
+    ThrowIfFailed(D3D12EnableExperimentalFeatures(_countof(Features), Features, nullptr, nullptr));
+
     UINT flags =
         m_syncInterval > 0
         ? 0

@@ -10,7 +10,7 @@
 //*********************************************************
 
 #define HLSL
-#include "RaytracingHlslCompat.h"
+#include "../../../RaytracingHlslCompat.h"
 
 Texture2D<float> g_input : register(t0);
 RWTexture2D<float> g_output : register(u0);
