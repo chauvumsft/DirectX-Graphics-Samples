@@ -1,7 +1,8 @@
-# D3D12 Raytracing Simple Lighting sample
+# D3D12 Raytracing Basic Shader Execution Reordering Scene sample
 ![D3D12 Raytracing Simple Lighting GUI](Screenshot.png)
 
-This sample demonstrates how to do ray generation for a dynamic perspective camera and calculate simple diffuse shading for a cube from a dynamic point light. The sample assumes familiarity with Dx12 programming and DirectX Raytracing concepts introduced in the [D3D12 Raytracing Hello World sample](../D3D12RaytracingHelloWorld/readme.md).
+This sample demonstrates how to do shader execution reordering feature on a basic scene made up of different materials. The sample assumes familiarity with Dx12 programming and DirectX Raytracing concepts introduced in the [D3D12 Raytracing Hello World sample](../D3D12RaytracingHelloWorld/readme.md).
+The reordering done in this sample is based on HitObject and MaterialID from the shader table.
 
 ##### Rendering
 Each frame render happens in the sample's OnRender() call and includes executing DispatchRays() with a 2D grid dimensions matching that of backbuffer resolution and copying of the raytraced result to the backbuffer before finally presenting the it to the screen. The sample implements three shaders: *ray generation*, *closest hit* and *miss* shader: 
