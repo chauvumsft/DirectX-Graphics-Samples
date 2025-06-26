@@ -1167,7 +1167,7 @@ void D3D12RaytracingSimpleLighting::RenderUI()
     // Transition render target to RENDER_TARGET state
     D3D12_RESOURCE_BARRIER barrier = CD3DX12_RESOURCE_BARRIER::Transition(
         renderTarget,
-        D3D12_RESOURCE_STATE_PRESENT, // or D3D12_RESOURCE_STATE_COMMON depending on your pipeline
+        D3D12_RESOURCE_STATE_PRESENT, 
         D3D12_RESOURCE_STATE_RENDER_TARGET
     );
     commandList->ResourceBarrier(1, &barrier);
@@ -1258,8 +1258,6 @@ void D3D12RaytracingSimpleLighting::ReleaseDeviceDependentResources()
     m_rayGenShaderTable.Reset();
     m_missShaderTable.Reset();
     m_hitGroupShaderTable.Reset();
-
-    //_bottomLevelAccelerationStructure.Reset();
     m_bottomLevelAccelerationStructureComplex.Reset();
     m_bottomLevelAccelerationStructureCube.Reset();
     m_topLevelAccelerationStructure.Reset();
