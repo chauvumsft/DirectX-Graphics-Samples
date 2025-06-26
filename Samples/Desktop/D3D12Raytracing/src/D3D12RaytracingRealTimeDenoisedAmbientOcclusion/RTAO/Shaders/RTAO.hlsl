@@ -63,18 +63,14 @@ bool TraceAORayAndReportIfHit(out float tHit, in Ray ray, in float TMax, in floa
     UINT rayFlags =
         // Ignore transparent surfaces for occlusion testing.
         RAY_FLAG_CULL_NON_OPAQUE; 
-   
-
-    HitObject hit = HitObject::TraceRay(g_scene,
-        rayFlags,
-        RTAOTraceRayParameters::InstanceMask,
-        RTAOTraceRayParameters::HitGroup::Offset[RTAORayType::AO],
-        RTAOTraceRayParameters::HitGroup::GeometryStride,
-        RTAOTraceRayParameters::MissShader::Offset[RTAORayType::AO],
-        rayDesc, shadowPayload);
-        
-    dx::MaybeReorderThread(hit);
-    HitObject::Invoke(hit, shadowPayload);
+                                      
+    TraceRay(g_scene,
+    rayFlags,
+    RTAOTraceRayParameters::InstanceMask,
+    RTAOTraceRayParameters::HitGroup::Offset[RTAORayType::AO],
+    RTAOTraceRayParameters::HitGroup::GeometryStride,
+    RTAOTraceRayParameters::MissShader::Offset[RTAORayType::AO],
+    rayDesc, shadowPayload);
     
     
     tHit = shadowPayload.tHit;

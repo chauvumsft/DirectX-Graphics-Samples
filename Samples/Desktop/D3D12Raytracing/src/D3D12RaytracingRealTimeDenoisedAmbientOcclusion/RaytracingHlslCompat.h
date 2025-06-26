@@ -100,9 +100,9 @@ struct AmbientOcclusionGBuffer
 #ifdef HLSL
 struct [raypayload] PathtracerRayPayload
 {
-    UINT rayRecursionDepth : read(caller, closesthit) : write(caller);
-    XMFLOAT3 radiance : read(caller) : write(closesthit, miss);
-    AmbientOcclusionGBuffer AOGBuffer: read(caller) : write(closesthit);
+    UINT rayRecursionDepth : write(caller) : read(closesthit);
+    XMFLOAT3 radiance : write(caller, closesthit, miss) : read(caller);
+    AmbientOcclusionGBuffer AOGBuffer: write(closesthit) : read(caller);
 };
 
 

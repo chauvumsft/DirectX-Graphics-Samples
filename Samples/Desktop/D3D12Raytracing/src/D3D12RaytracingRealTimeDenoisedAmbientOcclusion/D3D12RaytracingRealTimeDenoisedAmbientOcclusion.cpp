@@ -24,6 +24,9 @@ using namespace GameCore;
 
 HWND g_hWnd = 0;
 
+extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 717; }
+extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = u8".\\D3D12\\"; }
+
 namespace Sample
 {
     D3D12RaytracingRealTimeDenoisedAmbientOcclusion* g_pSample = nullptr;
@@ -39,6 +42,7 @@ namespace Sample
         g_pSample->RequestRecreateRaytracingResources();
     }
 }
+
 
 D3D12RaytracingRealTimeDenoisedAmbientOcclusion::D3D12RaytracingRealTimeDenoisedAmbientOcclusion(UINT width, UINT height, wstring name) :
     DXSample(width, height, name),

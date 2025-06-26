@@ -421,7 +421,10 @@ void MyRayGenShader_RadianceRay()
 
 	// Cast a ray into the scene and retrieve GBuffer information.
 	UINT currentRayRecursionDepth = 0;
-    PathtracerRayPayload rayPayload = TraceRadianceRay_Raygen(ray, currentRayRecursionDepth);
+                                                    
+    //PathtracerRayPayload rayPayload = TraceRadianceRay_Raygen(ray, currentRayRecursionDepth);
+                                                    
+    PathtracerRayPayload rayPayload = TraceRadianceRay(ray, currentRayRecursionDepth);
 
     // Invalidate perfect mirror reflections that missed. 
     // There is no We don't need to calculate AO for those.

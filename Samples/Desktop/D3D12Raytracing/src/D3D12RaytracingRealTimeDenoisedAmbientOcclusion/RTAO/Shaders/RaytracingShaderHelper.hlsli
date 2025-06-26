@@ -214,7 +214,7 @@ inline Ray GenerateCameraRay(uint2 index, in float3 cameraPosition, in float4x4 
     screenPos.y = -screenPos.y;
 
     // Unproject the pixel coordinate into a world positon.
-    float4 world = mul(float4(screenPos, 0, 1), projectionToWorldWithCameraAtOrigin);
+                                            float4 world = mul(projectionToWorldWithCameraAtOrigin, float4(screenPos, 0, 1));
 
     Ray ray;
     ray.origin = cameraPosition;
