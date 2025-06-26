@@ -1426,6 +1426,5 @@ std::vector<UINT8> D3D12RaytracingSimpleLighting::GenerateTextureData()
             pData[pixelOffset + 3] = 255;   // A
         }
     }
-
     return data;
 }
