@@ -13,9 +13,8 @@
 #ifndef RAYTRACING_HLSL
 #define RAYTRACING_HLSL
 #define HLSL
-#define SER_WORKLOAD_TEST
 // Constants for cube counts
-#define CUBE_INSTANCE_COUNT 10201 // or pass this via a constant buffer
+#define CUBE_INSTANCE_COUNT 2601 
 #include "RaytracingHlslCompat.h"
 
 using namespace dx;

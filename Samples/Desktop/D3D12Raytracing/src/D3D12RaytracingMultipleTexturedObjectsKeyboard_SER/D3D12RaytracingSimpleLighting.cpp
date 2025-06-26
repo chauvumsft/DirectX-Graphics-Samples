@@ -210,7 +210,7 @@ void D3D12RaytracingSimpleLighting::InitializeScene()
     // Setup camera.
     {
         // Initialize the view and projection inverse matrices.
-        m_eye = { 0.0f, 65.0f, -4.0f, 1.0f };
+        m_eye = { 0.0f, 50.0f, -4.0f, 1.0f };
         m_at = { 0.0f, 0.0f, 0.0f, 1.0f };
         XMVECTOR right = { 1.0f, 0.0f, 0.0f, 0.0f };
 
@@ -560,17 +560,6 @@ void D3D12RaytracingSimpleLighting::CreateRaytracingPipelineStateObject()
     auto lib = raytracingPipeline.CreateSubobject<CD3DX12_DXIL_LIBRARY_SUBOBJECT>();
     CD3DX12_SHADER_BYTECODE libCode(library);
     lib->SetDXILLibrary(&libCode);
-
-
-    // DXIL library
-    // This contains the shaders and their entrypoints for the state object.
-    // Since shaders are not considered a subobject, they need to be passed in via DXIL library subobjects.
-    //auto lib = raytracingPipeline.CreateSubobject<CD3DX12_DXIL_LIBRARY_SUBOBJECT>();
-    //D3D12_SHADER_BYTECODE libdxil = CD3DX12_SHADER_BYTECODE((void *)g_pRaytracing, ARRAYSIZE(g_pRaytracing));
-    //lib->SetDXILLibrary(&libdxil);
-    // Define which shader exports to surface from the library.
-    // If no shader exports are defined for a DXIL library subobject, all shaders will be surfaced.
-    // In this sample, this could be ommited for convenience since the sample uses all shaders in the library. 
     {
         lib->DefineExport(c_raygenShaderName);
         lib->DefineExport(c_closestHitShaderName);
@@ -588,15 +577,9 @@ void D3D12RaytracingSimpleLighting::CreateRaytracingPipelineStateObject()
     // Shader config
    //  Defines the maximum sizes in bytes for the ray payload and attribute structure.
     auto shaderConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>();
-    UINT payloadSize = sizeof(XMFLOAT4) * 2;    // float4 pixelColor + albedo
+    UINT payloadSize = sizeof(XMFLOAT4);    // float4 color
     UINT attributeSize = sizeof(XMFLOAT2);  // float2 barycentrics
     shaderConfig->Config(payloadSize, attributeSize);
-
-    //auto shaderConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>();
-    ////UINT payloadSize = 4 * sizeof(float) + sizeof(UINT);   // float4 color + uint iterations
-    //UINT payloadSize = 4 * sizeof(float);
-    //UINT attributeSize = 2 * sizeof(float); // float2 barycentrics
-    //shaderConfig->Config(payloadSize, attributeSize);
 
     // Local root signature and shader association
     // This is a root signature that enables a shader to have unique arguments that come from shader tables.
@@ -881,7 +864,7 @@ void D3D12RaytracingSimpleLighting::BuildAccelerationStructures()
     D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS topLevelInputs = {};
     topLevelInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
     topLevelInputs.Flags = buildFlags;
-    topLevelInputs.NumDescs = 20402;
+    topLevelInputs.NumDescs = 5202;
     topLevelInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
 
     D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO topLevelPrebuildInfo = {};
@@ -913,7 +896,7 @@ void D3D12RaytracingSimpleLighting::BuildAccelerationStructures()
     // Create an instance desc for the bottom-level acceleration structure.
     ComPtr<ID3D12Resource> instanceDescsResource;
     std::vector<D3D12_RAYTRACING_INSTANCE_DESC> instanceDesc;
-    int cubesPerRow = 100;     // Cubes per row along X and Z axes
+    int cubesPerRow = 50;     // Cubes per row along X and Z axes
     float cubeSpacing = 2.0f; // Spacing between cubes
 
     // Loop through each position in the XZ plane to create cubes and complex shapes.
@@ -929,7 +912,7 @@ void D3D12RaytracingSimpleLighting::BuildAccelerationStructures()
 
             desc.InstanceMask = 1;
             desc.AccelerationStructure = m_bottomLevelAccelerationStructureCube->GetGPUVirtualAddress();
-            desc.InstanceID = instanceDesc.size(); // Unique ID for each cube
+            desc.InstanceID = instanceDesc.size(); 
             desc.InstanceContributionToHitGroupIndex = static_cast<UINT>(instanceDesc.size());
             instanceDesc.push_back(desc);
         }
@@ -950,7 +933,7 @@ void D3D12RaytracingSimpleLighting::BuildAccelerationStructures()
 
             desc.InstanceMask = 1;
             desc.AccelerationStructure = m_bottomLevelAccelerationStructureComplex->GetGPUVirtualAddress();
-            desc.InstanceID = instanceDesc.size(); // Unique ID for each complex shape
+            desc.InstanceID = instanceDesc.size(); 
             desc.InstanceContributionToHitGroupIndex = static_cast<UINT>(instanceDesc.size());
             instanceDesc.push_back(desc);
         }
@@ -1050,12 +1033,12 @@ void D3D12RaytracingSimpleLighting::BuildShaderTables()
             CubeConstantBuffer cb;
         };
 
-        UINT numShaderRecords = 20402;
+        UINT numShaderRecords = 5202;
         UINT shaderRecordSize = shaderIdentifierSize + sizeof(RootArguments);
         ShaderTable hitGroupShaderTable(device, numShaderRecords, shaderRecordSize, L"HitGroupShaderTable");
 
 
-        for (int i = 0; i < 10201; ++i) {
+        for (int i = 0; i < 2601; ++i) {
             RootArguments argument;
             argument.cb = m_cubeCB;
             argument.cb.albedo = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f); // 16 bytes (4 floats × 4 bytes)
@@ -1065,7 +1048,7 @@ void D3D12RaytracingSimpleLighting::BuildShaderTables()
             hitGroupShaderIdentifier, shaderIdentifierSize, &argument, sizeof(argument)));
         }
 
-        for (int i = 0; i < 10201; ++i) {
+        for (int i = 0; i < 2601; ++i) {
             RootArguments argument;
             argument.cb = m_complexShapeCB;
             argument.cb.albedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); // 16 bytes (4 floats × 4 bytes)
@@ -1130,7 +1113,7 @@ void D3D12RaytracingSimpleLighting::DoRaytracing()
             // Since each shader table has only one shader record, the stride is same as the size.
             dispatchDesc->HitGroupTable.StartAddress = m_hitGroupShaderTable->GetGPUVirtualAddress();
             dispatchDesc->HitGroupTable.SizeInBytes = m_hitGroupShaderTable->GetDesc().Width;
-            dispatchDesc->HitGroupTable.StrideInBytes = m_hitGroupShaderTable->GetDesc().Width / 20402;
+            dispatchDesc->HitGroupTable.StrideInBytes = m_hitGroupShaderTable->GetDesc().Width / 5202;
             dispatchDesc->MissShaderTable.StartAddress = m_missShaderTable->GetGPUVirtualAddress();
             dispatchDesc->MissShaderTable.SizeInBytes = m_missShaderTable->GetDesc().Width;
             dispatchDesc->MissShaderTable.StrideInBytes = dispatchDesc->MissShaderTable.SizeInBytes;
