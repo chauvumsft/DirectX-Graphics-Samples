@@ -131,7 +131,7 @@ void MyRaygenShader()
         float4(0, 0, 0, 0),
     };
 
-
+    // If toggled 'S', enable SER  
     if (g_sceneCB.enableSER == 1)
     {
         HitObject hit = HitObject::TraceRay(Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 1, 0, ray, payload);
