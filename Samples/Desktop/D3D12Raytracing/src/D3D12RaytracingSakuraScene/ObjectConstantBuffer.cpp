@@ -1,18 +1,18 @@
 #include "stdafx.h"
 #include "RaytracingHlslCompat.h"
-#include "CubeConstantBuffer.h"
+#include "ObjectConstantBuffer.h"
 #include "DirectXRaytracingHelper.h"
 #include "D3D12RaytracingSakuraScene.h"
 #include "ObjLoader.h"
 
 
-void CubeConstantBuffer::Initialize(uint32_t material)
+void ObjectConstantBuffer::Initialize(XMFLOAT4 albedo, uint32_t material)
 {
     materialID = material;
     albedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); // default white
 }
 
-void CubeConstantBuffer::LoadCube(
+void ObjectConstantBuffer::LoadCube(
     ObjLoader* loader,
     float xScale,
     float yScale,
@@ -29,7 +29,7 @@ void CubeConstantBuffer::LoadCube(
     // TODO: Implement cube loading logic here
 }
 
-void CubeConstantBuffer::LoadObjMesh(
+void ObjectConstantBuffer::LoadObjMesh(
 	std::string name,
 	float scale,
 	ObjLoader* loader,

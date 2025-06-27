@@ -60,7 +60,7 @@
     <ClInclude Include="SharedCode.h" />
     <ClInclude Include="ObjLoader.h" />
     <ClInclude Include="CheckCast.h" />
-    <ClInclude Include="CubeConstantBuffer.h" />
+    <ClInclude Include="ObjectConstantBuffer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -82,7 +82,7 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ObjLoader.cpp" />
-    <ClCompile Include="CubeConstantBuffer.cpp" />
+    <ClCompile Include="ObjectConstantBuffer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="readme.md" />

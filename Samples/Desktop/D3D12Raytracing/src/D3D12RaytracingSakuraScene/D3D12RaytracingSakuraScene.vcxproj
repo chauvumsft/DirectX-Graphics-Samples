@@ -163,7 +163,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="CheckCast.h" />
-    <ClInclude Include="CubeConstantBuffer.h" />
+    <ClInclude Include="ObjectConstantBuffer.h" />
     <ClInclude Include="DeviceResources.h" />
     <ClInclude Include="DirectXRaytracingHelper.h" />
     <ClInclude Include="HlslCompat.h" />
@@ -179,7 +179,7 @@
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CubeConstantBuffer.cpp" />
+    <ClCompile Include="ObjectConstantBuffer.cpp" />
     <ClCompile Include="DeviceResources.cpp" />
     <ClCompile Include="ObjLoader.cpp" />
     <ClCompile Include="Win32Application.cpp" />

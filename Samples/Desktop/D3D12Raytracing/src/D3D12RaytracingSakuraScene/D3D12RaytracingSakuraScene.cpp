@@ -210,7 +210,7 @@ void D3D12RaytracingSakuraScene::InitializeScene()
     // Setup camera.
     {
         // Initialize the view and projection inverse matrices.
-        m_eye = { 0.0f, 50.0f, -4.0f, 1.0f };
+        m_eye = { 0.0f, 30.0f, -4.0f, 1.0f };
         m_at = { 0.0f, 0.0f, 0.0f, 1.0f };
         XMVECTOR right = { 1.0f, 0.0f, 0.0f, 0.0f };
 
@@ -290,12 +290,12 @@ void D3D12RaytracingSakuraScene::CreateDeviceDependentResources()
     // Create a raytracing pipeline state object which defines the binding of shaders, state and resources to be used during raytracing.
     CreateRaytracingPipelineStateObject();
 
-    m_tree.Initialize(TREE_MATERIAL);
+    m_tree.Initialize(XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), TREE_MATERIAL);
 
     // Create a heap for descriptors.
     CreateDescriptorHeap();
 
-    m_objLoader.Load(L"tree.obj");
+    m_objLoader.Load(L"french_bulldog.obj");
 
     // Build geometry to be used in the sample.
     BuildGeometry();
@@ -659,7 +659,7 @@ void D3D12RaytracingSakuraScene::BuildGeometry()
     auto device = m_deviceResources->GetD3DDevice();
 
     // Cube indices.
-    /*Index indices[] =
+    Index indices[] =
     {
         3,1,0,
         2,1,3,
@@ -678,10 +678,10 @@ void D3D12RaytracingSakuraScene::BuildGeometry()
 
         22,20,21,
         23,20,22
-    };*/
+    };
 
     // Cube vertices positions and corresponding triangle normals.
-    /*Vertex vertices[] =
+    Vertex vertices[] =
     {
         { XMFLOAT3(-1.0f, 1.0f, -1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f) },
         { XMFLOAT3(1.0f, 1.0f, -1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f) },
@@ -712,7 +712,33 @@ void D3D12RaytracingSakuraScene::BuildGeometry()
         { XMFLOAT3(1.0f, -1.0f, 1.0f), XMFLOAT3(0.0f, 0.0f, 1.0f) },
         { XMFLOAT3(1.0f, 1.0f, 1.0f), XMFLOAT3(0.0f, 0.0f, 1.0f) },
         { XMFLOAT3(-1.0f, 1.0f, 1.0f), XMFLOAT3(0.0f, 0.0f, 1.0f) },
-    };*/
+    };
+
+    AllocateUploadBuffer(device, indices, sizeof(indices), &m_indexBuffer.resource);
+    AllocateUploadBuffer(device, vertices, sizeof(vertices), &m_vertexBuffer.resource);
+
+    // Vertex buffer is passed to the shader along with index buffer as a descriptor table.
+    // Vertex buffer descriptor must follow index buffer descriptor in the descriptor heap.
+    UINT descriptorIndexIB = CreateBufferSRV(&m_indexBuffer, sizeof(indices) / 4, 0);
+    UINT descriptorIndexVB = CreateBufferSRV(&m_vertexBuffer, ARRAYSIZE(vertices), sizeof(vertices[0]));
+    ThrowIfFalse(descriptorIndexVB == descriptorIndexIB + 1, L"Vertex Buffer descriptor index must follow that of Index Buffer descriptor index!");
+}
+
+
+// Build geometry for a complex torus knot shape
+void D3D12RaytracingSakuraScene::BuildComplexGeometry()
+{
+    auto device = m_deviceResources->GetD3DDevice();
+    // Torus knot parameters
+    //const int tubularSegments = 7000;
+    //const int radialSegments = 42;    // Number of segments around radius
+    //const float p = 2.0f;             // Number of times around the circle
+    //const float q = 3.0f;             // Number of times through the circle
+    //const float radius = 1.0f;        // Radius of entire knot
+    //const float tubeRadius = 0.3f;    // Radius of the tube
+
+    /*const int vertexCount = tubularSegments * radialSegments;
+    const int indexCount = tubularSegments * radialSegments * 6;*/
 
     std::vector<Vertex> vertices;
     std::vector<Index> indices;
@@ -733,84 +759,18 @@ void D3D12RaytracingSakuraScene::BuildGeometry()
             &indices);
     }
 
-    AllocateUploadBuffer(device, indices.data(), sizeof(indices), &m_indexBuffer.resource);
-    AllocateUploadBuffer(device, vertices.data(), sizeof(vertices), &m_vertexBuffer.resource);
+    size_t indexBufferSize = indices.size() * sizeof(Index);
 
+    AllocateUploadBuffer(device, indices.data(), indexBufferSize, &m_complexIndexBuffer.resource);
+    AllocateUploadBuffer(device, vertices.data(), vertices.size() * sizeof(vertices[0]), &m_complexVertexBuffer.resource);
+
+
+    m_totalVertexCount = vertices.size();
     // Vertex buffer is passed to the shader along with index buffer as a descriptor table.
     // Vertex buffer descriptor must follow index buffer descriptor in the descriptor heap.
-    UINT descriptorIndexIB = CreateBufferSRV(&m_indexBuffer, sizeof(indices) / 4, 0);
-    UINT descriptorIndexVB = CreateBufferSRV(&m_vertexBuffer, vertices.size(), sizeof(vertices[0]));
+    UINT descriptorIndexIB = CreateBufferSRV(&m_complexIndexBuffer, sizeof(indices) / 4, 0);
+    UINT descriptorIndexVB = CreateBufferSRV(&m_complexVertexBuffer, vertices.size(), sizeof(vertices[0]));
     ThrowIfFalse(descriptorIndexVB == descriptorIndexIB + 1, L"Vertex Buffer descriptor index must follow that of Index Buffer descriptor index!");
-}
-
-
-// Build geometry for a complex torus knot shape
-void D3D12RaytracingSakuraScene::BuildComplexGeometry()
-{
-    auto device = m_deviceResources->GetD3DDevice();
-    // Torus knot parameters
-    const int tubularSegments = 7000;
-    const int radialSegments = 42;    // Number of segments around radius
-    const float p = 2.0f;             // Number of times around the circle
-    const float q = 3.0f;             // Number of times through the circle
-    const float radius = 1.0f;        // Radius of entire knot
-    const float tubeRadius = 0.3f;    // Radius of the tube
-
-    const int vertexCount = tubularSegments * radialSegments;
-    const int indexCount = tubularSegments * radialSegments * 6;
-
-    std::vector<Vertex> vertices(vertexCount);
-    std::vector<Index> indices(indexCount);
-
-    // Generate vertices
-    for (int i = 0; i < tubularSegments; i++) {
-        for (int j = 0; j < radialSegments; j++) {
-            const int index = i * radialSegments + j;
-            // Calculate position on the knot curve
-            float u = i / float(tubularSegments) * 2.0f * p * XM_PI;
-            float v = j / float(radialSegments) * 2.0f * XM_PI;
-            // Core curve of the knot
-            float x = (radius + tubeRadius * cos(v)) * cos(q * u);
-            float y = (radius + tubeRadius * cos(v)) * sin(q * u);
-            float z = tubeRadius * sin(v) + sin(p * u) * 0.5f;
-            // Calculate normals using partial derivatives
-            float nx = cos(v) * cos(q * u);
-            float ny = cos(v) * sin(q * u);
-            float nz = sin(v);
-            // Normalize the normal
-            float len = sqrt(nx * nx + ny * ny + nz * nz);
-            nx /= len; ny /= len; nz /= len;
-            // Store the vertex
-            vertices[index].position = XMFLOAT3(x, y, z);
-            vertices[index].normal = XMFLOAT3(nx, ny, nz);
-        }
-    }
-    // Generate indices for triangles
-    int indexOffset = 0;
-    for (int i = 0; i < tubularSegments; i++) {
-        for (int j = 0; j < radialSegments; j++) {
-            const int a = i * radialSegments + j;
-            const int b = i * radialSegments + ((j + 1) % radialSegments);
-            const int c = ((i + 1) % tubularSegments) * radialSegments + ((j + 1) % radialSegments);
-            const int d = ((i + 1) % tubularSegments) * radialSegments + j;
-            // Triangle 1
-            indices[indexOffset++] = a;
-            indices[indexOffset++] = b;
-            indices[indexOffset++] = d;
-            // Triangle 2
-            indices[indexOffset++] = b;
-            indices[indexOffset++] = c;
-            indices[indexOffset++] = d;
-        }
-    }
-
-    AllocateUploadBuffer(device, indices.data(), indices.size() * sizeof(Index), &m_complexIndexBuffer.resource);
-    AllocateUploadBuffer(device, vertices.data(), vertices.size() * sizeof(Vertex), &m_complexVertexBuffer.resource);
-
-    // Create SRVs for the complex shape buffers
-    UINT descriptorIndexIB = CreateBufferSRV(&m_complexIndexBuffer, (UINT)indices.size(), sizeof(Index));
-    UINT descriptorIndexVB = CreateBufferSRV(&m_complexVertexBuffer, (UINT)vertices.size(), sizeof(Vertex));
-    ThrowIfFalse(descriptorIndexVB == descriptorIndexIB + 1, L"Complex shape vertex buffer descriptor index must follow that of index buffer descriptor index!");
 }
 
 
@@ -920,13 +880,17 @@ void D3D12RaytracingSakuraScene::BuildAccelerationStructures()
     ComPtr<ID3D12Resource> instanceDescsResource;
     std::vector<D3D12_RAYTRACING_INSTANCE_DESC> instanceDesc;
     int cubesPerRow = 50;     // Cubes per row along X and Z axes
-    float cubeSpacing = 2.0f; // Spacing between cubes
+    float cubeSpacing = 2.2f; // Spacing between cubes
 
     // Loop through each position in the XZ plane to create cubes and complex shapes.
     for (int x = -cubesPerRow / 2; x <= cubesPerRow / 2; ++x) {
         for (int z = -cubesPerRow / 2; z <= cubesPerRow / 2; ++z) {
             D3D12_RAYTRACING_INSTANCE_DESC desc = {};
-            desc.Transform[0][0] = desc.Transform[1][1] = desc.Transform[2][2] = 1.0f;
+            float scale = 1.0f; /
+            desc.Transform[0][0] = scale; // Scale X
+            desc.Transform[1][1] = scale; // Scale Y
+            desc.Transform[2][2] = scale; // Scale Z
+
 
             // Position the cubes in the XZ plane, Y remains 0 (flat around 0, 0, 0)
             desc.Transform[0][3] = x * cubeSpacing; // Position along X axis
@@ -943,11 +907,14 @@ void D3D12RaytracingSakuraScene::BuildAccelerationStructures()
 
 
     float complexShapeZ = -15.0f;
-    float complexShapeSpacing = 1.7f;
+    float complexShapeSpacing = 2.2f;
     for (int x = -cubesPerRow / 2; x <= cubesPerRow / 2; ++x) {
         for (int z = -cubesPerRow / 2; z <= cubesPerRow / 2; ++z) {
             D3D12_RAYTRACING_INSTANCE_DESC desc = {};
-            desc.Transform[0][0] = desc.Transform[1][1] = desc.Transform[2][2] = 1.0f;
+            float scale = 25.0f; 
+            desc.Transform[0][0] = scale; // Scale X
+            desc.Transform[1][1] = scale; // Scale Y
+            desc.Transform[2][2] = scale; // Scale Z
 
             // Position the complex shapes directly above the cubes
             desc.Transform[0][3] = x * complexShapeSpacing; // X position same as cubes

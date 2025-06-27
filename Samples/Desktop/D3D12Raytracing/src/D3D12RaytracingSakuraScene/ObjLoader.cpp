@@ -15,7 +15,7 @@ void ObjLoader::Load(wchar_t const* fileName)
 		if (line.length() == 0)
 			continue;
 
-		std::string objectIdentifierPrefix = "# object ";
+		std::string objectIdentifierPrefix = "o ";
 		if (line.find(objectIdentifierPrefix) == 0)
 		{
 			currentObject = GetOrCreateObject(line.substr(objectIdentifierPrefix.length()));
@@ -28,7 +28,7 @@ void ObjLoader::Load(wchar_t const* fileName)
 			stringStream >> vertex.x >> vertex.y >> vertex.z;
 			currentObject->AddVertex(vertex);
 		}
-		else if (line[0] == 'v' && line[1] == 'n'&& line[2] == ' ')
+		else if (line[0] == 'v' && line[1] == 't'&& line[2] == ' ')
 		{
 			XMFLOAT3 normal;
 			std::stringstream stringStream(line.substr(2));

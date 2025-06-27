@@ -15,7 +15,7 @@
 #include "StepTimer.h"
 #include "RaytracingHlslCompat.h"
 #include "ObjLoader.h"
-#include "CubeConstantBuffer.h"
+#include "ObjectConstantBuffer.h"
 
 namespace GlobalRootSignatureParams {
     enum Value {
@@ -102,7 +102,7 @@ private:
     CubeConstantBuffer m_cubeCB;
     CubeConstantBuffer m_secondCubeCB;
     CubeConstantBuffer m_complexShapeCB;
-    CubeConstantBuffer m_tree;
+    ObjectConstantBuffer m_tree;
 
     // Asset loader
     ObjLoader m_objLoader;
@@ -118,6 +118,7 @@ private:
     D3DBuffer m_vertexBuffer;
     D3DBuffer m_complexIndexBuffer;
     D3DBuffer m_complexVertexBuffer;
+    int m_totalVertexCount;
     
     // Acceleration structure
     ComPtr<ID3D12Resource> m_bottomLevelAccelerationStructure;
