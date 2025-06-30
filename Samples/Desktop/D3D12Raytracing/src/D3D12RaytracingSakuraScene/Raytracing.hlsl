@@ -190,17 +190,36 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
     
     // Albedo is defined per shape or material
     float3 albedo = g_cubeCB.albedo; 
-
-    // Compute the triangle's normal
-    float3 triangleNormal = HitAttribute(vertexNormals, attr);
+    float4 sampled = float4(1.0, 1.0, 1.0, 1.0);
+        float3 triangleNormal = HitAttribute(vertexNormals, attr);
         
-    // Calculate diffuse lighting
-    float3 lightDir = normalize(g_sceneCB.lightPosition.xyz - hitPosition);
-    float NdotL = saturate(dot(triangleNormal, lightDir));
-    float3 finalColor = albedo * g_sceneCB.lightDiffuseColor.rgb * NdotL;
+        if (g_cubeCB.materialID == 1)
+        {
+            float2 uv = float2(
+            frac(hitPosition.x * 0.5 + 0.5),
+            frac(hitPosition.z * 0.5 + 0.5)
+            );
 
-    payload.color = float4(finalColor, 1.0f);
-}
+            // Sample the texture
+            float3 colorSum = float3(0, 0, 0);
+            for (uint i = 0; i < 10; ++i)
+            {
+                float2 offset = float2(i * 0.01, i * 0.01);
+                colorSum += MaterialTexture.SampleLevel(TextureSampler, uv + offset, 0).rgb;
+                colorSum.r = sin(colorSum.r) + cos(colorSum.r);
+                colorSum.g = sin(colorSum.g) + cos(colorSum.g);
+                colorSum.b = sin(colorSum.b) + cos(colorSum.b);
+            }
+            sampled.rgb = colorSum;
+        }
+
+        float3 baseColor = albedo * sampled.rgb;
+
+        float3 lightDir = normalize(g_sceneCB.lightPosition.xyz - hitPosition);
+        float NdotL = saturate(dot(triangleNormal, lightDir));
+        float3 finalColor = baseColor * g_sceneCB.lightDiffuseColor.rgb * NdotL;
+        payload.color = float4(finalColor, 1.0f);
+    }
 
 [shader("miss")]
 void MyMissShader(inout RayPayload payload)

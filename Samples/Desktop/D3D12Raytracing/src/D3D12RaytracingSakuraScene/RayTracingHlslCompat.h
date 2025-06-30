@@ -11,7 +11,6 @@
 
 #ifndef RAYTRACINGHLSLCOMPAT_H
 #define RAYTRACINGHLSLCOMPAT_H
-#include "CheckCast.h"
 
 #ifdef HLSL
 #include "HlslCompat.h"
@@ -19,7 +18,7 @@
 using namespace DirectX;
 
 // Shader will use byte encoding to access indices.
-typedef UINT16 Index;
+typedef UINT32 Index;
 #endif
 class ObjLoader;
 struct SceneConstantBuffer

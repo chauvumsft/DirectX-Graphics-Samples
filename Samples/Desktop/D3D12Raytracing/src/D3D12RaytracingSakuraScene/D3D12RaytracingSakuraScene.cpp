@@ -12,7 +12,6 @@
 #include "stdafx.h"
 #include "D3D12RaytracingSakuraScene.h"
 #include "DirectXRaytracingHelper.h"
-#include "CompiledShaders\Raytracing.hlsl.h"
 #include "dxcapi.h"
 #include <atlbase.h>
 #include <vector>
@@ -210,7 +209,7 @@ void D3D12RaytracingSakuraScene::InitializeScene()
     // Setup camera.
     {
         // Initialize the view and projection inverse matrices.
-        m_eye = { 0.0f, 30.0f, -4.0f, 1.0f };
+        m_eye = { 0.0f, 10.0f, -14.0f, 1.0f };
         m_at = { 0.0f, 0.0f, 0.0f, 1.0f };
         XMVECTOR right = { 1.0f, 0.0f, 0.0f, 0.0f };
 
@@ -290,12 +289,12 @@ void D3D12RaytracingSakuraScene::CreateDeviceDependentResources()
     // Create a raytracing pipeline state object which defines the binding of shaders, state and resources to be used during raytracing.
     CreateRaytracingPipelineStateObject();
 
-    m_tree.Initialize(XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), TREE_MATERIAL);
+    //m_tree.Initialize(XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), TREE_MATERIAL);
 
     // Create a heap for descriptors.
     CreateDescriptorHeap();
 
-    m_objLoader.Load(L"french_bulldog.obj");
+    m_objLoader.Load(L"tree3.obj");
 
     // Build geometry to be used in the sample.
     BuildGeometry();
@@ -729,17 +728,6 @@ void D3D12RaytracingSakuraScene::BuildGeometry()
 void D3D12RaytracingSakuraScene::BuildComplexGeometry()
 {
     auto device = m_deviceResources->GetD3DDevice();
-    // Torus knot parameters
-    //const int tubularSegments = 7000;
-    //const int radialSegments = 42;    // Number of segments around radius
-    //const float p = 2.0f;             // Number of times around the circle
-    //const float q = 3.0f;             // Number of times through the circle
-    //const float radius = 1.0f;        // Radius of entire knot
-    //const float tubeRadius = 0.3f;    // Radius of the tube
-
-    /*const int vertexCount = tubularSegments * radialSegments;
-    const int indexCount = tubularSegments * radialSegments * 6;*/
-
     std::vector<Vertex> vertices;
     std::vector<Index> indices;
 
@@ -749,7 +737,7 @@ void D3D12RaytracingSakuraScene::BuildComplexGeometry()
         XMVECTOR zAxis = { 0, 0, 1 };
         XMMATRIX transform = XMMatrixRotationAxis(xAxis, 3.14159f / 2.0f) * XMMatrixRotationAxis(yAxis, 3.14159f / 12.0f) * XMMatrixRotationAxis(zAxis, 3.14159f) * XMMatrixTranslation(-1.5f, 0, 0);
         m_tree.LoadObjMesh(
-            "Plane001",
+            "tree",
             0.007f,
             &m_objLoader,
             m_deviceResources.get(),
@@ -790,7 +778,7 @@ void D3D12RaytracingSakuraScene::BuildAccelerationStructures()
     cubeGeometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
     cubeGeometryDesc.Triangles.IndexBuffer = m_indexBuffer.resource->GetGPUVirtualAddress();
     cubeGeometryDesc.Triangles.IndexCount = static_cast<UINT>(m_indexBuffer.resource->GetDesc().Width) / sizeof(Index);
-    cubeGeometryDesc.Triangles.IndexFormat = DXGI_FORMAT_R16_UINT;
+    cubeGeometryDesc.Triangles.IndexFormat = DXGI_FORMAT_R32_UINT;
     cubeGeometryDesc.Triangles.Transform3x4 = 0;
     cubeGeometryDesc.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
     cubeGeometryDesc.Triangles.VertexCount = static_cast<UINT>(m_vertexBuffer.resource->GetDesc().Width) / sizeof(Vertex);
@@ -807,7 +795,7 @@ void D3D12RaytracingSakuraScene::BuildAccelerationStructures()
     complexGeometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
     complexGeometryDesc.Triangles.IndexBuffer = m_complexIndexBuffer.resource->GetGPUVirtualAddress();
     complexGeometryDesc.Triangles.IndexCount = static_cast<UINT>(m_complexIndexBuffer.resource->GetDesc().Width) / sizeof(Index);
-    complexGeometryDesc.Triangles.IndexFormat = DXGI_FORMAT_R16_UINT;
+    complexGeometryDesc.Triangles.IndexFormat = DXGI_FORMAT_R32_UINT;
     complexGeometryDesc.Triangles.Transform3x4 = 0;
     complexGeometryDesc.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
     complexGeometryDesc.Triangles.VertexCount = static_cast<UINT>(m_complexVertexBuffer.resource->GetDesc().Width) / sizeof(Vertex);
@@ -847,7 +835,7 @@ void D3D12RaytracingSakuraScene::BuildAccelerationStructures()
     D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS topLevelInputs = {};
     topLevelInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
     topLevelInputs.Flags = buildFlags;
-    topLevelInputs.NumDescs = 5202;
+    topLevelInputs.NumDescs = 882;
     topLevelInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
 
     D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO topLevelPrebuildInfo = {};
@@ -879,14 +867,14 @@ void D3D12RaytracingSakuraScene::BuildAccelerationStructures()
     // Create an instance desc for the bottom-level acceleration structure.
     ComPtr<ID3D12Resource> instanceDescsResource;
     std::vector<D3D12_RAYTRACING_INSTANCE_DESC> instanceDesc;
-    int cubesPerRow = 50;     // Cubes per row along X and Z axes
-    float cubeSpacing = 2.2f; // Spacing between cubes
+    int cubesPerRow = 20;     // Cubes per row along X and Z axes
+    float cubeSpacing = 4.2f; // Spacing between cubes
 
     // Loop through each position in the XZ plane to create cubes and complex shapes.
     for (int x = -cubesPerRow / 2; x <= cubesPerRow / 2; ++x) {
         for (int z = -cubesPerRow / 2; z <= cubesPerRow / 2; ++z) {
             D3D12_RAYTRACING_INSTANCE_DESC desc = {};
-            float scale = 1.0f; /
+            float scale = 2.0f; 
             desc.Transform[0][0] = scale; // Scale X
             desc.Transform[1][1] = scale; // Scale Y
             desc.Transform[2][2] = scale; // Scale Z
@@ -907,11 +895,11 @@ void D3D12RaytracingSakuraScene::BuildAccelerationStructures()
 
 
     float complexShapeZ = -15.0f;
-    float complexShapeSpacing = 2.2f;
+    float complexShapeSpacing = 4.0f;
     for (int x = -cubesPerRow / 2; x <= cubesPerRow / 2; ++x) {
         for (int z = -cubesPerRow / 2; z <= cubesPerRow / 2; ++z) {
             D3D12_RAYTRACING_INSTANCE_DESC desc = {};
-            float scale = 25.0f; 
+            float scale = 55.0f; 
             desc.Transform[0][0] = scale; // Scale X
             desc.Transform[1][1] = scale; // Scale Y
             desc.Transform[2][2] = scale; // Scale Z
@@ -1023,12 +1011,12 @@ void D3D12RaytracingSakuraScene::BuildShaderTables()
             CubeConstantBuffer cb;
         };
 
-        UINT numShaderRecords = 5202;
+        UINT numShaderRecords = 882;
         UINT shaderRecordSize = shaderIdentifierSize + sizeof(RootArguments);
         ShaderTable hitGroupShaderTable(device, numShaderRecords, shaderRecordSize, L"HitGroupShaderTable");
 
 
-        for (int i = 0; i < 2601; ++i) {
+        for (int i = 0; i < 441; ++i) {
             RootArguments argument;
             argument.cb = m_cubeCB;
             argument.cb.albedo = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f); // 16 bytes (4 floats × 4 bytes)
@@ -1038,7 +1026,7 @@ void D3D12RaytracingSakuraScene::BuildShaderTables()
             hitGroupShaderIdentifier, shaderIdentifierSize, &argument, sizeof(argument)));
         }
 
-        for (int i = 0; i < 2601; ++i) {
+        for (int i = 0; i < 441; ++i) {
             RootArguments argument;
             argument.cb = m_complexShapeCB;
             argument.cb.albedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); // 16 bytes (4 floats × 4 bytes)
@@ -1103,7 +1091,7 @@ void D3D12RaytracingSakuraScene::DoRaytracing()
             // Since each shader table has only one shader record, the stride is same as the size.
             dispatchDesc->HitGroupTable.StartAddress = m_hitGroupShaderTable->GetGPUVirtualAddress();
             dispatchDesc->HitGroupTable.SizeInBytes = m_hitGroupShaderTable->GetDesc().Width;
-            dispatchDesc->HitGroupTable.StrideInBytes = m_hitGroupShaderTable->GetDesc().Width / 5202;
+            dispatchDesc->HitGroupTable.StrideInBytes = m_hitGroupShaderTable->GetDesc().Width / 882;
             dispatchDesc->MissShaderTable.StartAddress = m_missShaderTable->GetGPUVirtualAddress();
             dispatchDesc->MissShaderTable.SizeInBytes = m_missShaderTable->GetDesc().Width;
             dispatchDesc->MissShaderTable.StrideInBytes = dispatchDesc->MissShaderTable.SizeInBytes;
