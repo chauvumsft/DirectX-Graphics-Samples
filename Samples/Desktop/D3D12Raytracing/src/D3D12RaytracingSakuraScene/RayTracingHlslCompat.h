@@ -20,7 +20,7 @@ using namespace DirectX;
 // Shader will use byte encoding to access indices.
 typedef UINT32 Index;
 #endif
-class ObjLoader;
+class ObjModelLoader;
 struct SceneConstantBuffer
 {
     XMMATRIX projectionToWorld;
@@ -29,6 +29,9 @@ struct SceneConstantBuffer
     XMVECTOR lightAmbientColor;
     XMVECTOR lightDiffuseColor;
     uint32_t enableSER;
+    uint32_t enableSortByHit;
+    uint32_t enableSortByMaterial;
+    uint32_t enableSortByBoth;
 };
 
 struct Vertex
@@ -44,12 +47,12 @@ struct CubeConstantBuffer
     uint32_t materialID;
 };
 
-//struct Vertex
-//{
-//    XMFLOAT3 position;
-//    XMFLOAT3 normal;
-    //XMFLOAT2 textureCoordinate;
-//};
+struct ObjectConstantBuffer
+{
+    uint32_t materialID;
+    XMFLOAT4 albedo;
+};
+
 
 #define CHECKERBOARD_FLOOR_MATERIAL 1
 #define TREE_MATERIAL 2

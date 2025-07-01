@@ -11,10 +11,27 @@
 
 #include "stdafx.h"
 #include "D3D12RaytracingSakuraScene.h"
+#pragma comment(lib, "runtimeobject.lib")
 
 _Use_decl_annotations_
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow)
 {
+#if (_WIN32_WINNT >= 0x0A00 /*_WIN32_WINNT_WIN10*/)
+    Microsoft::WRL::Wrappers::RoInitializeWrapper initialize(RO_INIT_MULTITHREADED);
+    if (FAILED(initialize))
+    {
+        OutputDebugStringA("Failed to initialize WinRT.\n");
+        return -1;
+    }
+#else
+    HRESULT hr = CoInitializeEx(nullptr, COINIT_MULTITHREADED);
+    if (FAILED(hr))
+    {
+        OutputDebugStringA("Failed to initialize COM.\n");
+        return -1;
+    }
+#endif
+
     D3D12RaytracingSakuraScene sample(1280, 720, L"D3D12 Raytracing - Simple Lighting");
     return Win32Application::Run(&sample, hInstance, nCmdShow);
 }

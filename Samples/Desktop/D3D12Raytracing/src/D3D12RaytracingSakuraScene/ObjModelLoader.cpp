@@ -1,7 +1,9 @@
 #include "stdafx.h"
-#include "ObjLoader.h"
+#include "ObjModelLoader.h"
+#include <iostream>
 
-void ObjLoader::Load(wchar_t const* fileName)
+
+void ObjModelLoader::Load(wchar_t const* fileName)
 {
 	std::ifstream openedFile(fileName);
 	std::string line;
@@ -12,7 +14,10 @@ void ObjLoader::Load(wchar_t const* fileName)
 		if (line.empty()) continue;
 
 		if (line._Starts_with("o ")) {
-			currentObject = GetOrCreateObject(line.substr(2));
+			std::string objName = line.substr(2);
+			std::cout << "Loaded object: " << objName << std::endl;
+			currentObject = FindOrCreateObject(line.substr(2));
+			
 			continue;
 		}
 
@@ -20,7 +25,12 @@ void ObjLoader::Load(wchar_t const* fileName)
 			XMFLOAT2 texCoord;
 			std::stringstream ss(line.substr(3));
 			ss >> texCoord.x >> texCoord.y;
-			currentObject->AddTexCoord(texCoord);
+			
+            if (currentObject != nullptr) {
+                currentObject->m_texCoords.push_back(texCoord);
+            } else {
+                std::cerr << "Error: currentObject is null." << std::endl;
+            }
 			continue;
 		}
 
@@ -28,7 +38,12 @@ void ObjLoader::Load(wchar_t const* fileName)
 			XMFLOAT3 normal;
 			std::stringstream ss(line.substr(2));
 			ss >> normal.x >> normal.y >> normal.z;
-			currentObject->AddNormal(normal);
+			if (currentObject != nullptr) {
+				currentObject->m_normals.push_back(normal);
+			}
+			else {
+				std::cerr << "Error: currentObject is null." << std::endl;
+			}
 			continue;
 		}
 
@@ -36,7 +51,12 @@ void ObjLoader::Load(wchar_t const* fileName)
 			XMFLOAT3 vertex;
 			std::stringstream ss(line.substr(1));
 			ss >> vertex.x >> vertex.y >> vertex.z;
-			currentObject->AddVertex(vertex);
+			if (currentObject != nullptr) {
+				currentObject->m_vertices.push_back(vertex);
+			}
+			else {
+				std::cerr << "Error: currentObject is null." << std::endl;
+			}
 			continue;
 		}
 
@@ -46,7 +66,7 @@ void ObjLoader::Load(wchar_t const* fileName)
 			std::stringstream stringStream(line.substr(2)); 
 			stringStream >> tokens[0] >> tokens[1] >> tokens[2];
 
-			Object::ThreeIndices v{}, n{}, t{};
+			Object::FaceElementIndices v{}, n{}, t{};
 			bool hasNormals = false, hasTexCoords = false;
 
 			for (int i = 0; i < 3; ++i)
@@ -88,15 +108,15 @@ void ObjLoader::Load(wchar_t const* fileName)
 
 			if (hasNormals && hasTexCoords)
 			{
-				currentObject->AddFace(v, n, t);
+				currentObject->AddObjFace(v, n, t);
 			}
 			else if (hasNormals)
 			{
-				currentObject->AddFace(v, n);
+				currentObject->AddObjFace(v, n);
 			}
 			else
 			{
-				currentObject->AddFace(v);
+				currentObject->AddObjFace(v);
 			}
 		}
 
@@ -104,7 +124,7 @@ void ObjLoader::Load(wchar_t const* fileName)
 	}
 }
 
-ObjLoader::Object* ObjLoader::GetObject(std::string const& name)
+ObjModelLoader::Object* ObjModelLoader::GetObject(std::string const& name)
 {
 	for (auto& obj : m_objects) 
 	{
@@ -115,7 +135,7 @@ ObjLoader::Object* ObjLoader::GetObject(std::string const& name)
 	return nullptr;
 }
 
-ObjLoader::Object* ObjLoader::GetOrCreateObject(std::string const& name)
+ObjModelLoader::Object* ObjModelLoader::FindOrCreateObject(std::string const& name)
 {
 	if (auto* obj = GetObject(name))
 		return obj;
@@ -126,7 +146,8 @@ ObjLoader::Object* ObjLoader::GetOrCreateObject(std::string const& name)
 	return &m_objects.back();
 }
 
-void ObjLoader::GetObjectVerticesAndIndices(
+
+void ObjModelLoader::GetObjectVerticesAndIndices(
 	std::string const& name,
 	float scale,
 	std::vector<Vertex>* vertices,
@@ -134,6 +155,10 @@ void ObjLoader::GetObjectVerticesAndIndices(
 {
 	size_t baseIndex = vertices->size();
 	Object* obj = GetObject(name);
+	if (!obj) {
+		throw std::runtime_error("Object '" + name + "' not found in OBJ file.");
+	}
+
 
 	for (const auto& face : obj->m_faces) 
 	{
@@ -143,6 +168,10 @@ void ObjLoader::GetObjectVerticesAndIndices(
 
 			// Get vertex position
 			Index index = face.VertexIndices.Values[vertexIndex] - 1; // 1-indexed
+			if (index >= obj->m_vertices.size()) {
+				throw std::runtime_error("Vertex index out of bounds.");
+			}
+
 			v.position = obj->m_vertices.at(index);
 			v.position.x *= scale;
 			v.position.y *= scale;

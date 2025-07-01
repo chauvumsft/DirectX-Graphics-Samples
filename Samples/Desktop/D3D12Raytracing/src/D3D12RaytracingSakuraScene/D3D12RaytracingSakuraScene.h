@@ -14,8 +14,8 @@
 #include "DXSample.h"
 #include "StepTimer.h"
 #include "RaytracingHlslCompat.h"
-#include "ObjLoader.h"
-#include "ObjectConstantBuffer.h"
+#include "ObjModelLoader.h"
+//#include "ObjectConstantBuffer.h"
 
 namespace GlobalRootSignatureParams {
     enum Value {
@@ -91,21 +91,25 @@ private:
 
     // User toggle
     bool m_serEnabled;
+    bool m_sortByHit;
+    bool m_sortByMaterial;
+    bool m_sortByBoth;
     bool m_rebuildASNextFrame;
 
     // Texture resources
-    ComPtr<ID3D12Resource> m_texture;
-    CD3DX12_GPU_DESCRIPTOR_HANDLE m_textureSrvGpuDescriptor;
+    ComPtr<ID3D12Resource> m_texture1;
+    ComPtr<ID3D12Resource> m_texture2;
+    CD3DX12_GPU_DESCRIPTOR_HANDLE m_textureSrvGpuDescriptor1;
+    CD3DX12_GPU_DESCRIPTOR_HANDLE m_textureSrvGpuDescriptor2;
 
     // Raytracing scene
     SceneConstantBuffer m_sceneCB[FrameCount];
     CubeConstantBuffer m_cubeCB;
     CubeConstantBuffer m_secondCubeCB;
     CubeConstantBuffer m_complexShapeCB;
-    ObjectConstantBuffer m_tree;
 
     // Asset loader
-    ObjLoader m_objLoader;
+    ObjModelLoader m_ObjModelLoader;
 
     // Geometry
     struct D3DBuffer
@@ -118,13 +122,19 @@ private:
     D3DBuffer m_vertexBuffer;
     D3DBuffer m_complexIndexBuffer;
     D3DBuffer m_complexVertexBuffer;
+    D3DBuffer m_leavesIndexBuffer;
+    D3DBuffer m_leavesVertexBuffer;
     int m_totalVertexCount;
+    int m_totalLeavesVertexCount;
     
     // Acceleration structure
     ComPtr<ID3D12Resource> m_bottomLevelAccelerationStructure;
     ComPtr<ID3D12Resource> m_bottomLevelAccelerationStructureCube;
     ComPtr<ID3D12Resource> m_bottomLevelAccelerationStructureComplex;
+    ComPtr<ID3D12Resource> m_bottomLevelAccelerationStructureLeaves;
+
     ComPtr<ID3D12Resource> m_topLevelAccelerationStructureComplex;
+    ComPtr<ID3D12Resource> m_topLevelAccelerationStructureLeaves;
     ComPtr<ID3D12Resource> m_topLevelAccelerationStructure;
 
     // Raytracing output

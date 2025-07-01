@@ -163,11 +163,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="CheckCast.h" />
-    <ClInclude Include="ObjectConstantBuffer.h" />
     <ClInclude Include="DeviceResources.h" />
     <ClInclude Include="DirectXRaytracingHelper.h" />
     <ClInclude Include="HlslCompat.h" />
-    <ClInclude Include="ObjLoader.h" />
+    <ClInclude Include="ObjModelLoader.h" />
     <ClInclude Include="RaytracingHlslCompat.h" />
     <ClInclude Include="SharedCode.h" />
     <ClInclude Include="StepTimer.h" />
@@ -179,9 +178,8 @@
     <ClInclude Include="stdafx.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ObjectConstantBuffer.cpp" />
     <ClCompile Include="DeviceResources.cpp" />
-    <ClCompile Include="ObjLoader.cpp" />
+    <ClCompile Include="ObjModelLoader.cpp" />
     <ClCompile Include="Win32Application.cpp" />
     <ClCompile Include="D3D12RaytracingSakuraScene.cpp" />
     <ClCompile Include="DXSample.cpp" />
@@ -214,6 +212,7 @@
     <Import Project="..\..\..\..\..\Packages\Microsoft.Direct3D.DXC.1.8.2505.28\build\native\Microsoft.Direct3D.DXC.targets" Condition="Exists('..\..\..\..\..\Packages\Microsoft.Direct3D.DXC.1.8.2505.28\build\native\Microsoft.Direct3D.DXC.targets')" />
     <Import Project="..\..\..\..\..\Packages\Microsoft.Direct3D.D3D12.1.717.0-preview\build\native\Microsoft.Direct3D.D3D12.targets" Condition="Exists('..\..\..\..\..\Packages\Microsoft.Direct3D.D3D12.1.717.0-preview\build\native\Microsoft.Direct3D.D3D12.targets')" />
     <Import Project="..\..\..\..\..\Packages\directxtk12_desktop_2019.2024.10.29.1\build\native\directxtk12_desktop_2019.targets" Condition="Exists('..\..\..\..\..\Packages\directxtk12_desktop_2019.2024.10.29.1\build\native\directxtk12_desktop_2019.targets')" />
+    <Import Project="..\..\..\..\..\Packages\directxtex_desktop_win10.2024.10.29.1\build\native\directxtex_desktop_win10.targets" Condition="Exists('..\..\..\..\..\Packages\directxtex_desktop_win10.2024.10.29.1\build\native\directxtex_desktop_win10.targets')" />
   </ImportGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
@@ -225,5 +224,6 @@
     <Error Condition="!Exists('..\..\..\..\..\Packages\Microsoft.Direct3D.D3D12.1.717.0-preview\build\native\Microsoft.Direct3D.D3D12.props')" Text="$([System.String]::Format('$(ErrorText)', '..\..\..\..\..\Packages\Microsoft.Direct3D.D3D12.1.717.0-preview\build\native\Microsoft.Direct3D.D3D12.props'))" />
     <Error Condition="!Exists('..\..\..\..\..\Packages\Microsoft.Direct3D.D3D12.1.717.0-preview\build\native\Microsoft.Direct3D.D3D12.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\..\..\..\Packages\Microsoft.Direct3D.D3D12.1.717.0-preview\build\native\Microsoft.Direct3D.D3D12.targets'))" />
     <Error Condition="!Exists('..\..\..\..\..\Packages\directxtk12_desktop_2019.2024.10.29.1\build\native\directxtk12_desktop_2019.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\..\..\..\Packages\directxtk12_desktop_2019.2024.10.29.1\build\native\directxtk12_desktop_2019.targets'))" />
+    <Error Condition="!Exists('..\..\..\..\..\Packages\directxtex_desktop_win10.2024.10.29.1\build\native\directxtex_desktop_win10.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\..\..\..\Packages\directxtex_desktop_win10.2024.10.29.1\build\native\directxtex_desktop_win10.targets'))" />
   </Target>
 </Project>

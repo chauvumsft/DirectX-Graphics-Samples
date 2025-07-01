@@ -14,7 +14,7 @@
 #define RAYTRACING_HLSL
 #define HLSL
 // Constants for cube counts
-#define CUBE_INSTANCE_COUNT 2601 
+#define CUBE_INSTANCE_COUNT 441
 #include "RaytracingHlslCompat.h"
 
 using namespace dx;
@@ -23,14 +23,21 @@ RWTexture2D<float4> RenderTarget : register(u0);
     
 ByteAddressBuffer IndicesCube : register(t1, space0);
 StructuredBuffer<Vertex> VerticesCube : register(t2, space0);
+    
 ByteAddressBuffer IndicesComplex : register(t3, space0);
 StructuredBuffer<Vertex> VerticesComplex : register(t4, space0);
+    
+ByteAddressBuffer IndicesLeaves : register(t5, space0);
+StructuredBuffer<Vertex> VerticesLeaves : register(t6, space0);
 
 ConstantBuffer<SceneConstantBuffer> g_sceneCB : register(b0);
 ConstantBuffer<CubeConstantBuffer> g_cubeCB : register(b1);
     
-Texture2D<float4> MaterialTexture : register(t5, space0);
-SamplerState TextureSampler : register(s0);
+Texture2D<float4> TrunkTexture : register(t7, space0);
+SamplerState TrunkSampler : register(s0);
+    
+Texture2D<float4> SakuraTexture : register(t8, space0);
+SamplerState SakuraSampler : register(s1);
 
     
 // Load three 16 bit indices from a byte addressed buffer. 
@@ -138,8 +145,20 @@ void MyRaygenShader()
         uint materialID = hit.LoadLocalRootTableConstant(16);
         uint hintBits = 1;
         
-        // Reorder threads based on the hit object and material ID (0 - cube, 1 - complex).
-        dx::MaybeReorderThread(hit, materialID, hintBits);
+       if (g_sceneCB.enableSortByHit == 1)
+        {
+            dx::MaybeReorderThread(hit);
+        }
+       else if (g_sceneCB.enableSortByMaterial == 1)
+        {
+            dx::MaybeReorderThread(materialID, hintBits);
+        }
+            
+        else if (g_sceneCB.enableSortByBoth == 1)
+        {
+            dx::MaybeReorderThread(hit, materialID, hintBits);
+        }
+
         HitObject::Invoke(hit, payload);
     }
     else
@@ -158,6 +177,7 @@ void MyRaygenShader()
 void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 {
     bool isComplex = InstanceID() >= CUBE_INSTANCE_COUNT;
+    bool isLeaves = InstanceID() >= CUBE_INSTANCE_COUNT * 2;
     float3 hitPosition = HitWorldPosition();
 
     // Get the base index of the triangle's first 16 bit index.
@@ -177,6 +197,12 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
         vertexNormals[1] = VerticesComplex[indices.y].normal;
         vertexNormals[2] = VerticesComplex[indices.z].normal;
     }
+    else if (isLeaves)
+    {
+        vertexNormals[0] = VerticesLeaves[indices.x].normal;
+        vertexNormals[1] = VerticesLeaves[indices.y].normal;
+        vertexNormals[2] = VerticesLeaves[indices.z].normal;
+    }
     else
     {
         vertexNormals[0] = VerticesCube[indices.x].normal;
@@ -191,35 +217,58 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
     // Albedo is defined per shape or material
     float3 albedo = g_cubeCB.albedo; 
     float4 sampled = float4(1.0, 1.0, 1.0, 1.0);
-        float3 triangleNormal = HitAttribute(vertexNormals, attr);
+    float3 triangleNormal = HitAttribute(vertexNormals, attr);
         
         if (g_cubeCB.materialID == 1)
         {
-            float2 uv = float2(
+            float2 baseUV = float2(
             frac(hitPosition.x * 0.5 + 0.5),
             frac(hitPosition.z * 0.5 + 0.5)
             );
 
-            // Sample the texture
-            float3 colorSum = float3(0, 0, 0);
-            for (uint i = 0; i < 10; ++i)
+            float3 tempColor = float3(0.0, 0.0, 0.0);
+
+            [unroll]
+            for (int i = 0; i < 1; ++i)
             {
-                float2 offset = float2(i * 0.01, i * 0.01);
-                colorSum += MaterialTexture.SampleLevel(TextureSampler, uv + offset, 0).rgb;
-                colorSum.r = sin(colorSum.r) + cos(colorSum.r);
-                colorSum.g = sin(colorSum.g) + cos(colorSum.g);
-                colorSum.b = sin(colorSum.b) + cos(colorSum.b);
+                // Add a small offset to simulate variation in sampling
+                float offset = float(i) * 0.0005;
+                float2 uv = baseUV + float2(offset, offset);
+                tempColor += TrunkTexture.SampleLevel(TrunkSampler, uv, 0).rgb;
             }
-            sampled.rgb = colorSum;
+
+                 // Average the result to keep brightness consistent
+            sampled.rgb = tempColor / 1.0;
         }
+        else if (g_cubeCB.materialID == 2)
+        {
+            float2 baseUV = float2(
+            frac(hitPosition.x * 0.5 + 0.5),
+            frac(hitPosition.z * 0.5 + 0.5)
+            );
 
+            float3 tempColor = float3(0.0, 0.0, 0.0);
+
+            [unroll]
+            for (int i = 0; i < 1; ++i)
+            {
+                // Add a small offset to simulate variation in sampling
+                float offset = float(i) * 0.0005;
+                float2 uv = baseUV + float2(offset, offset);
+                tempColor += SakuraTexture.SampleLevel(SakuraSampler, uv, 0).rgb;
+            }
+
+                // Average the result to keep brightness consistent
+            sampled.rgb = tempColor / 1.0;
+        }
         float3 baseColor = albedo * sampled.rgb;
-
         float3 lightDir = normalize(g_sceneCB.lightPosition.xyz - hitPosition);
         float NdotL = saturate(dot(triangleNormal, lightDir));
         float3 finalColor = baseColor * g_sceneCB.lightDiffuseColor.rgb * NdotL;
         payload.color = float4(finalColor, 1.0f);
     }
+   
+    
 
 [shader("miss")]
 void MyMissShader(inout RayPayload payload)
