@@ -14,7 +14,7 @@
 #define RAYTRACING_HLSL
 #define HLSL
 // Constants for cube counts
-#define CUBE_INSTANCE_COUNT 441
+#define CUBE_INSTANCE_COUNT 8810
 #include "RaytracingHlslCompat.h"
 
 using namespace dx;
@@ -177,7 +177,7 @@ void MyRaygenShader()
 void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 {
     bool isComplex = InstanceID() >= CUBE_INSTANCE_COUNT;
-    bool isLeaves = InstanceID() >= CUBE_INSTANCE_COUNT * 2;
+    //bool isLeaves = InstanceID() >= CUBE_INSTANCE_COUNT * 2;
     float3 hitPosition = HitWorldPosition();
 
     // Get the base index of the triangle's first 16 bit index.
@@ -197,12 +197,7 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
         vertexNormals[1] = VerticesComplex[indices.y].normal;
         vertexNormals[2] = VerticesComplex[indices.z].normal;
     }
-    else if (isLeaves)
-    {
-        vertexNormals[0] = VerticesLeaves[indices.x].normal;
-        vertexNormals[1] = VerticesLeaves[indices.y].normal;
-        vertexNormals[2] = VerticesLeaves[indices.z].normal;
-    }
+
     else
     {
         vertexNormals[0] = VerticesCube[indices.x].normal;
