@@ -215,7 +215,7 @@ void D3D12RaytracingSakuraScene::InitializeScene()
     // Setup camera.
     {
         // Initialize the view and projection inverse matrices.
-        m_eye = { 0.0f, 10.0f, -14.0f, 1.0f };
+        m_eye = { 0.0f, 5.0f, -14.0f, 1.0f };
         m_at = { 0.0f, 0.0f, 0.0f, 1.0f };
         XMVECTOR right = { 1.0f, 0.0f, 0.0f, 0.0f };
 
@@ -1197,7 +1197,7 @@ void D3D12RaytracingSakuraScene::OnUpdate()
 
     // Rotate the camera around Y axis.
     {
-        float secondsToRotateAround = 24.0f;
+        float secondsToRotateAround = 30.0f;
         float angleToRotateBy = 360.0f * (elapsedTime / secondsToRotateAround);
         XMMATRIX rotate = XMMatrixRotationY(XMConvertToRadians(angleToRotateBy));
         m_eye = XMVector3Transform(m_eye, rotate);
