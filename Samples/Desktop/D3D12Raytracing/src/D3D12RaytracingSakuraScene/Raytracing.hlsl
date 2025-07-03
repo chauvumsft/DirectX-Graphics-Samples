@@ -216,11 +216,7 @@ float4 TraceRadianceRay(in Ray ray, in UINT currentRayRecursionDepth)
 
 [shader("closesthit")]
 void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
-{
-    bool isCube = (InstanceID() < NUM_CUBES);
-        bool isTrunk = (InstanceID() >= NUM_CUBES) && (InstanceID() < NUM_CUBES + NUM_TRUNKS + 441);
-        bool isLeaves = (InstanceID() >= NUM_CUBES);
-    
+{  
     float3 hitPosition = HitWorldPosition();
         
     // Get the base index of the triangle's first 16 bit index.
@@ -231,50 +227,23 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
     
     // Load up 3 16 bit indices for the triangle.
     uint3 indices;
-    if (isTrunk)
-    {
-        indices = Load3x16BitIndices(baseIndex, IndicesTrunk);
-    }
-    else if (isLeaves)
-    {
-        indices = Load3x16BitIndices(baseIndex, IndicesLeaves);
-    }
-    else
-    {
-        indices = Load3x16BitIndices(baseIndex, IndicesCube);
-    }
-        
-// Retrieve corresponding vertex normals for the triangle vertices.
+
+    // Retrieve corresponding vertex normals for the triangle vertices.
     float3 vertexNormals[3];
-    if (isTrunk)
-    {
-        vertexNormals[0] = VerticesTrunk[indices.x].normal;
-        vertexNormals[1] = VerticesTrunk[indices.y].normal;
-        vertexNormals[2] = VerticesTrunk[indices.z].normal;
-    }
-    else if (isLeaves)
-    {
-        vertexNormals[0] = VerticesLeaves[indices.x].normal;
-        vertexNormals[1] = VerticesLeaves[indices.y].normal;
-        vertexNormals[2] = VerticesLeaves[indices.z].normal;
-    }
-    else
-    {
-        vertexNormals[0] = VerticesCube[indices.x].normal;
-        vertexNormals[1] = VerticesCube[indices.y].normal;
-        vertexNormals[2] = VerticesCube[indices.z].normal;
-    }
-        
-    // Compute the triangle's normal.
-    float3 triangleNormal = HitAttribute(vertexNormals, attr);
-        
+
     // Albedo is defined per shape or material
     float3 albedo = g_cubeCB.albedo;
     float4 sampled = float4(1.0, 1.0, 1.0, 1.0);
+    float3 triangleNormal;
         
     
     if (g_cubeCB.materialID == 1)
     {
+        indices = Load3x16BitIndices(baseIndex, IndicesCube);
+        vertexNormals[0] = VerticesCube[indices.x].normal;
+        vertexNormals[1] = VerticesCube[indices.y].normal;
+        vertexNormals[2] = VerticesCube[indices.z].normal;
+        triangleNormal = HitAttribute(vertexNormals, attr);
         // Trace a reflection ray
         Ray reflectionRay = { hitPosition + triangleNormal * 0.5f, reflect(WorldRayDirection(), triangleNormal) };
         float4 reflectionColor = TraceRadianceRay(reflectionRay, payload.recursionDepth);
@@ -287,6 +256,11 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
     }
     else if (g_cubeCB.materialID == 2)
     {
+        indices = Load3x16BitIndices(baseIndex, IndicesTrunk);
+        vertexNormals[0] = VerticesTrunk[indices.x].normal;
+        vertexNormals[1] = VerticesTrunk[indices.y].normal;
+        vertexNormals[2] = VerticesTrunk[indices.z].normal;
+        triangleNormal = HitAttribute(vertexNormals, attr);
         float2 baseUV = float2(
         frac(hitPosition.x * 0.5 + 0.5),
         frac(hitPosition.z * 0.5 + 0.5)
@@ -295,14 +269,28 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
     }
     else if (g_cubeCB.materialID == 3)
     {
-        float2 baseUV = float2(
+            indices = Load3x16BitIndices(baseIndex, IndicesLeaves);
+            vertexNormals[0] = VerticesLeaves[indices.x].normal;
+            vertexNormals[1] = VerticesLeaves[indices.y].normal;
+            vertexNormals[2] = VerticesLeaves[indices.z].normal;
+            triangleNormal = HitAttribute(vertexNormals, attr);
+            float2 baseUV = float2(
         frac(hitPosition.x * 0.5 + 0.5),
         frac(hitPosition.z * 0.5 + 0.5)
         );
+            sampled.rgb = SakuraTexture.SampleLevel(SakuraSampler, baseUV, 0).rgb;
+         // sampled.rgb = float3(1, 0, 1); // Magenta
 
-        sampled.rgb = SakuraTexture.SampleLevel(SakuraSampler, baseUV, 0).rgb;
     }
-    
+    else
+    {
+        indices = Load3x16BitIndices(baseIndex, IndicesCube);
+        vertexNormals[0] = VerticesCube[indices.x].normal;
+        vertexNormals[1] = VerticesCube[indices.y].normal;
+        vertexNormals[2] = VerticesCube[indices.z].normal;
+        triangleNormal = HitAttribute(vertexNormals, attr);
+            
+    }
     float3 baseColor = albedo * sampled.rgb;
     float3 lightDir = normalize(g_sceneCB.lightPosition.xyz - hitPosition);
     float NdotL = saturate(dot(triangleNormal, lightDir));

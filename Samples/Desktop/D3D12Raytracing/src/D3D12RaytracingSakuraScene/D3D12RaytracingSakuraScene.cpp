@@ -238,7 +238,7 @@ void D3D12RaytracingSakuraScene::InitializeScene()
         XMFLOAT4 lightAmbientColor;
         XMFLOAT4 lightDiffuseColor;
 
-        lightPosition = XMFLOAT4(0.0f, 15.8f, 233.0f, 0.0f);
+        lightPosition = XMFLOAT4(0.0f, 15.8f,-233.0f, 0.0f);
         m_sceneCB[frameIndex].lightPosition = XMLoadFloat4(&lightPosition);
 
         lightAmbientColor = XMFLOAT4(0.8f, 0.8f, 0.8f, 1.0f); // Brighter ambient light
@@ -296,11 +296,11 @@ void D3D12RaytracingSakuraScene::CreateDeviceDependentResources()
     // Create a raytracing pipeline state object which defines the binding of shaders, state and resources to be used during raytracing.
     CreateRaytracingPipelineStateObject();
 
-    //m_tree.Initialize(XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f), TREE_MATERIAL);
 
     // Create a heap for descriptors.
     CreateDescriptorHeap();
 
+	// Load gometry from OBJ files.
     m_ObjModelLoader.Load(L"trunk.obj");
     m_ObjModelLoader.Load(L"leaves.obj");
 
@@ -777,12 +777,20 @@ void D3D12RaytracingSakuraScene::BuildTreeGeometry()
     m_totalTrunkVertexCount = trunkVertices.size();
     // Vertex buffer is passed to the shader along with index buffer as a descriptor table.
     // Vertex buffer descriptor must follow index buffer descriptor in the descriptor heap.
-    UINT trunkDescriptorIndexIB = CreateBufferSRV(&m_trunkIndexBuffer, sizeof(trunkIndices) / 4, 0);
+    UINT trunkDescriptorIndexIB = CreateBufferSRV(
+        &m_trunkIndexBuffer,
+        static_cast<UINT>(trunkIndices.size() * sizeof(Index) / 4),
+        0
+    );
     UINT trunkDescriptorIndexVB = CreateBufferSRV(&m_trunkVertexBuffer, trunkVertices.size(), sizeof(trunkVertices[0]));
     ThrowIfFalse(trunkDescriptorIndexVB == trunkDescriptorIndexIB + 1, L"Vertex Buffer descriptor index must follow that of Index Buffer descriptor index!");
 
     m_totalLeavesVertexCount = leavesVertices.size();
-    UINT leavesDescriptorIndexIB = CreateBufferSRV(&m_leavesIndexBuffer, sizeof(leavesIndices) / 4, 0);
+    UINT leavesDescriptorIndexIB = CreateBufferSRV(
+        &m_leavesIndexBuffer,
+        static_cast<UINT>(leavesIndices.size() * sizeof(Index) / 4),
+        0
+    );
     UINT leavesDescriptorIndexVB = CreateBufferSRV(&m_leavesVertexBuffer, leavesVertices.size(), sizeof(leavesVertices[0]));
     ThrowIfFalse(leavesDescriptorIndexVB == leavesDescriptorIndexIB + 1, L"Vertex Buffer descriptor index must follow that of Index Buffer descriptor index!");
 }
@@ -1255,7 +1263,7 @@ void D3D12RaytracingSakuraScene::OnUpdate()
         UpdateCameraMatrices();
     }
 
-    //// Rotate the second light around Y axis.
+    // Rotate the second light around Y axis.
     //{
     //    float secondsToRotateAround = 8.0f;
     //    float angleToRotateBy = -360.0f * (elapsedTime / secondsToRotateAround);
