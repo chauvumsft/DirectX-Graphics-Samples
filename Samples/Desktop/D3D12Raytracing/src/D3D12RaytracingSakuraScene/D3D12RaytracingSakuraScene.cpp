@@ -983,7 +983,7 @@ void D3D12RaytracingSakuraScene::BuildAccelerationStructures()
 
 
 	// Trunk and leaves
-    float trunkShapeSpacing = 2.0f;
+    float trunkShapeSpacing = 1.5f;
     // Store random positions for trunks
     std::vector<std::tuple<float, float, float>> trunkPositions;
 
