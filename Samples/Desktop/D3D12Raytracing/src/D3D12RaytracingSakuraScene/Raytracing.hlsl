@@ -14,7 +14,11 @@
 #define RAYTRACING_HLSL
 #define HLSL
 // Constants for cube counts
-#define CUBE_INSTANCE_COUNT 881
+
+#define NUM_CUBES 882
+#define NUM_TRUNKS 441
+#define NUM_LEAVES 441
+
 #include "RaytracingHlslCompat.h"
 
 using namespace dx;
@@ -24,8 +28,8 @@ RWTexture2D<float4> RenderTarget : register(u0);
 ByteAddressBuffer IndicesCube : register(t1, space0);
 StructuredBuffer<Vertex> VerticesCube : register(t2, space0);
     
-ByteAddressBuffer IndicesComplex : register(t3, space0);
-StructuredBuffer<Vertex> VerticesComplex : register(t4, space0);
+ByteAddressBuffer IndicesTrunk : register(t3, space0);
+StructuredBuffer<Vertex> VerticesTrunk : register(t4, space0);
     
 ByteAddressBuffer IndicesLeaves : register(t5, space0);
 StructuredBuffer<Vertex> VerticesLeaves : register(t6, space0);
@@ -213,24 +217,23 @@ float4 TraceRadianceRay(in Ray ray, in UINT currentRayRecursionDepth)
 [shader("closesthit")]
 void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 {
-// Fix instance ID ranges
-    bool isCube = (InstanceID() < CUBE_INSTANCE_COUNT);
-        bool isComplex = (InstanceID() >= CUBE_INSTANCE_COUNT) && (InstanceID() < CUBE_INSTANCE_COUNT + 442);
-        bool isLeaves = (InstanceID() >= CUBE_INSTANCE_COUNT * 2);
+    bool isCube = (InstanceID() < NUM_CUBES);
+        bool isTrunk = (InstanceID() >= NUM_CUBES) && (InstanceID() < NUM_CUBES + NUM_TRUNKS + 441);
+        bool isLeaves = (InstanceID() >= NUM_CUBES);
     
     float3 hitPosition = HitWorldPosition();
-
-// Get the base index of the triangle's first 16 bit index.
+        
+    // Get the base index of the triangle's first 16 bit index.
     uint indexSizeInBytes = 2;
     uint indicesPerTriangle = 3;
     uint triangleIndexStride = indicesPerTriangle * indexSizeInBytes;
     uint baseIndex = PrimitiveIndex() * triangleIndexStride;
     
-// Load up 3 16 bit indices for the triangle.
+    // Load up 3 16 bit indices for the triangle.
     uint3 indices;
-    if (isComplex)
+    if (isTrunk)
     {
-        indices = Load3x16BitIndices(baseIndex, IndicesComplex);
+        indices = Load3x16BitIndices(baseIndex, IndicesTrunk);
     }
     else if (isLeaves)
     {
@@ -243,11 +246,11 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
         
 // Retrieve corresponding vertex normals for the triangle vertices.
     float3 vertexNormals[3];
-    if (isComplex)
+    if (isTrunk)
     {
-        vertexNormals[0] = VerticesComplex[indices.x].normal;
-        vertexNormals[1] = VerticesComplex[indices.y].normal;
-        vertexNormals[2] = VerticesComplex[indices.z].normal;
+        vertexNormals[0] = VerticesTrunk[indices.x].normal;
+        vertexNormals[1] = VerticesTrunk[indices.y].normal;
+        vertexNormals[2] = VerticesTrunk[indices.z].normal;
     }
     else if (isLeaves)
     {
@@ -261,33 +264,16 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
         vertexNormals[1] = VerticesCube[indices.y].normal;
         vertexNormals[2] = VerticesCube[indices.z].normal;
     }
-
-// Compute the triangle's normal.
+        
+    // Compute the triangle's normal.
     float3 triangleNormal = HitAttribute(vertexNormals, attr);
-    
-// Albedo is defined per shape or material
+        
+    // Albedo is defined per shape or material
     float3 albedo = g_cubeCB.albedo;
     float4 sampled = float4(1.0, 1.0, 1.0, 1.0);
         
+    
     if (g_cubeCB.materialID == 1)
-    {
-        float2 baseUV = float2(
-        frac(hitPosition.x * 0.5 + 0.5),
-        frac(hitPosition.z * 0.5 + 0.5)
-    );
-
-        sampled.rgb = TrunkTexture.SampleLevel(TrunkSampler, baseUV, 0).rgb;
-    }
-    else if (g_cubeCB.materialID == 2)
-    {
-        float2 baseUV = float2(
-        frac(hitPosition.x * 0.5 + 0.5),
-        frac(hitPosition.z * 0.5 + 0.5)
-    );
-
-        sampled.rgb = SakuraTexture.SampleLevel(SakuraSampler, baseUV, 0).rgb;
-    }
-    else if (g_cubeCB.materialID == 3)
     {
         // Trace a reflection ray
         Ray reflectionRay = { hitPosition + triangleNormal * 0.5f, reflect(WorldRayDirection(), triangleNormal) };
@@ -298,6 +284,23 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 
         payload.color = reflectedColor;
         return;
+    }
+    else if (g_cubeCB.materialID == 2)
+    {
+        float2 baseUV = float2(
+        frac(hitPosition.x * 0.5 + 0.5),
+        frac(hitPosition.z * 0.5 + 0.5)
+        );
+        sampled.rgb = TrunkTexture.SampleLevel(TrunkSampler, baseUV, 0).rgb;
+    }
+    else if (g_cubeCB.materialID == 3)
+    {
+        float2 baseUV = float2(
+        frac(hitPosition.x * 0.5 + 0.5),
+        frac(hitPosition.z * 0.5 + 0.5)
+        );
+
+        sampled.rgb = SakuraTexture.SampleLevel(SakuraSampler, baseUV, 0).rgb;
     }
     
     float3 baseColor = albedo * sampled.rgb;

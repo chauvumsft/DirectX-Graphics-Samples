@@ -106,6 +106,7 @@ private:
     SceneConstantBuffer m_sceneCB[FrameCount];
     ObjectConstantBuffer m_objectCB;
     ObjectConstantBuffer m_cubeCB;
+	ObjectConstantBuffer m_transparentCubeCB;
     ObjectConstantBuffer m_trunkCB;
     ObjectConstantBuffer m_leavesCB;
 
@@ -121,11 +122,11 @@ private:
     };
     D3DBuffer m_indexBuffer;
     D3DBuffer m_vertexBuffer;
-    D3DBuffer m_complexIndexBuffer;
-    D3DBuffer m_complexVertexBuffer;
+    D3DBuffer m_trunkIndexBuffer;
+    D3DBuffer m_trunkVertexBuffer;
     D3DBuffer m_leavesIndexBuffer;
     D3DBuffer m_leavesVertexBuffer;
-    int m_totalVertexCount;
+    int m_totalTrunkVertexCount;
     int m_totalLeavesVertexCount;
     
     // Acceleration structure
@@ -134,7 +135,7 @@ private:
     ComPtr<ID3D12Resource> m_bottomLevelAccelerationStructureTrunk;
     ComPtr<ID3D12Resource> m_bottomLevelAccelerationStructureLeaves;
 
-    ComPtr<ID3D12Resource> m_topLevelAccelerationStructureComplex;
+    ComPtr<ID3D12Resource> m_topLevelAccelerationStructuretrunk;
     ComPtr<ID3D12Resource> m_topLevelAccelerationStructureLeaves;
     ComPtr<ID3D12Resource> m_topLevelAccelerationStructure;
 
@@ -182,7 +183,7 @@ private:
     void CreateRaytracingOutputResource();
     void BuildGeometry();
     void CreateTexture();
-    void BuildComplexGeometry();
+    void BuildTreeGeometry();
     void BuildAccelerationStructures();
     void BuildShaderTables();
     void UpdateForSizeChange(UINT clientWidth, UINT clientHeight);

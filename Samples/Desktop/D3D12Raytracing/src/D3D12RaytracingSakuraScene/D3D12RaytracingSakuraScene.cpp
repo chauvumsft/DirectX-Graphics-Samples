@@ -307,8 +307,8 @@ void D3D12RaytracingSakuraScene::CreateDeviceDependentResources()
     // Build geometry to be used in the sample.
     BuildGeometry();
 
-	// Build complex geometry (the torus knot to illustrate the use of multiple geometries in the scene)
-    BuildComplexGeometry();
+	// Build trunk geometry (the torus knot to illustrate the use of multiple geometries in the scene)
+    BuildTreeGeometry();
 
     // Create texture
     CreateTexture();
@@ -738,12 +738,12 @@ void D3D12RaytracingSakuraScene::BuildGeometry()
 }
 
 
-// Build geometry for a complex torus knot shape
-void D3D12RaytracingSakuraScene::BuildComplexGeometry()
+// Build geometry for a trunk torus knot shape
+void D3D12RaytracingSakuraScene::BuildTreeGeometry()
 {
     auto device = m_deviceResources->GetD3DDevice();
-    std::vector<Vertex> vertices;
-    std::vector<Index> indices;
+    std::vector<Vertex> trunkVertices;
+    std::vector<Index> trunkIndices;
     std::vector<Vertex> leavesVertices;
     std::vector<Index> leavesIndices;
 
@@ -755,8 +755,8 @@ void D3D12RaytracingSakuraScene::BuildComplexGeometry()
         m_ObjModelLoader.GetObjectVerticesAndIndices(
             "tree",
             0.007f,
-            &vertices,
-            &indices);
+            &trunkVertices,
+            &trunkIndices);
 
         m_ObjModelLoader.GetObjectVerticesAndIndices(
             "leaves",
@@ -765,26 +765,23 @@ void D3D12RaytracingSakuraScene::BuildComplexGeometry()
             &leavesIndices);
     }
 
-    size_t indexBufferSize = indices.size() * sizeof(Index);
-
-    AllocateUploadBuffer(device, indices.data(), indexBufferSize, &m_complexIndexBuffer.resource);
-    AllocateUploadBuffer(device, vertices.data(), vertices.size() * sizeof(vertices[0]), &m_complexVertexBuffer.resource);
+    size_t trunkIndexBufferSize = trunkIndices.size() * sizeof(Index);
+    AllocateUploadBuffer(device, trunkIndices.data(), trunkIndexBufferSize, &m_trunkIndexBuffer.resource);
+    AllocateUploadBuffer(device, trunkVertices.data(), trunkVertices.size() * sizeof(trunkVertices[0]), &m_trunkVertexBuffer.resource);
 
     size_t leavesIndexBufferSize = leavesIndices.size() * sizeof(Index);
     AllocateUploadBuffer(device, leavesIndices.data(), leavesIndexBufferSize, &m_leavesIndexBuffer.resource);
     AllocateUploadBuffer(device, leavesVertices.data(), leavesVertices.size() * sizeof(leavesVertices[0]), &m_leavesVertexBuffer.resource);
 
 
-    m_totalVertexCount = vertices.size();
+    m_totalTrunkVertexCount = trunkVertices.size();
     // Vertex buffer is passed to the shader along with index buffer as a descriptor table.
     // Vertex buffer descriptor must follow index buffer descriptor in the descriptor heap.
-    UINT descriptorIndexIB = CreateBufferSRV(&m_complexIndexBuffer, sizeof(indices) / 4, 0);
-    UINT descriptorIndexVB = CreateBufferSRV(&m_complexVertexBuffer, vertices.size(), sizeof(vertices[0]));
-    ThrowIfFalse(descriptorIndexVB == descriptorIndexIB + 1, L"Vertex Buffer descriptor index must follow that of Index Buffer descriptor index!");
+    UINT trunkDescriptorIndexIB = CreateBufferSRV(&m_trunkIndexBuffer, sizeof(trunkIndices) / 4, 0);
+    UINT trunkDescriptorIndexVB = CreateBufferSRV(&m_trunkVertexBuffer, trunkVertices.size(), sizeof(trunkVertices[0]));
+    ThrowIfFalse(trunkDescriptorIndexVB == trunkDescriptorIndexIB + 1, L"Vertex Buffer descriptor index must follow that of Index Buffer descriptor index!");
 
     m_totalLeavesVertexCount = leavesVertices.size();
-    // Vertex buffer is passed to the shader along with index buffer as a descriptor table.
-    // Vertex buffer descriptor must follow index buffer descriptor in the descriptor heap.
     UINT leavesDescriptorIndexIB = CreateBufferSRV(&m_leavesIndexBuffer, sizeof(leavesIndices) / 4, 0);
     UINT leavesDescriptorIndexVB = CreateBufferSRV(&m_leavesVertexBuffer, leavesVertices.size(), sizeof(leavesVertices[0]));
     ThrowIfFalse(leavesDescriptorIndexVB == leavesDescriptorIndexIB + 1, L"Vertex Buffer descriptor index must follow that of Index Buffer descriptor index!");
@@ -820,21 +817,17 @@ void D3D12RaytracingSakuraScene::BuildAccelerationStructures()
     cubeGeometryDesc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
 
     // Setup trunk geometry desc
-    D3D12_RAYTRACING_GEOMETRY_DESC complexGeometryDesc = {};
-    complexGeometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
-    complexGeometryDesc.Triangles.IndexBuffer = m_complexIndexBuffer.resource->GetGPUVirtualAddress();
-    complexGeometryDesc.Triangles.IndexCount = static_cast<UINT>(m_complexIndexBuffer.resource->GetDesc().Width) / sizeof(Index);
-    complexGeometryDesc.Triangles.IndexFormat = DXGI_FORMAT_R32_UINT;
-    complexGeometryDesc.Triangles.Transform3x4 = 0;
-    complexGeometryDesc.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
-    complexGeometryDesc.Triangles.VertexCount = static_cast<UINT>(m_complexVertexBuffer.resource->GetDesc().Width) / sizeof(Vertex);
-    complexGeometryDesc.Triangles.VertexBuffer.StartAddress = m_complexVertexBuffer.resource->GetGPUVirtualAddress();
-    complexGeometryDesc.Triangles.VertexBuffer.StrideInBytes = sizeof(Vertex);
-
-    // Mark the geometry as opaque. 
-    // PERFORMANCE TIP: mark geometry as opaque whenever applicable as it can enable important ray processing optimizations.
-    // Note: When rays encounter opaque geometry an any hit shader will not be executed whether it is present or not.
-    complexGeometryDesc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_NONE;
+    D3D12_RAYTRACING_GEOMETRY_DESC trunkGeometryDesc = {};
+    trunkGeometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
+    trunkGeometryDesc.Triangles.IndexBuffer = m_trunkIndexBuffer.resource->GetGPUVirtualAddress();
+    trunkGeometryDesc.Triangles.IndexCount = static_cast<UINT>(m_trunkIndexBuffer.resource->GetDesc().Width) / sizeof(Index);
+    trunkGeometryDesc.Triangles.IndexFormat = DXGI_FORMAT_R32_UINT;
+    trunkGeometryDesc.Triangles.Transform3x4 = 0;
+    trunkGeometryDesc.Triangles.VertexFormat = DXGI_FORMAT_R32G32B32_FLOAT;
+    trunkGeometryDesc.Triangles.VertexCount = static_cast<UINT>(m_trunkVertexBuffer.resource->GetDesc().Width) / sizeof(Vertex);
+    trunkGeometryDesc.Triangles.VertexBuffer.StartAddress = m_trunkVertexBuffer.resource->GetGPUVirtualAddress();
+    trunkGeometryDesc.Triangles.VertexBuffer.StrideInBytes = sizeof(Vertex);
+    trunkGeometryDesc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
 
     // Setup leaves shape geometry desc
     D3D12_RAYTRACING_GEOMETRY_DESC leavesGeometryDesc = {};
@@ -847,11 +840,7 @@ void D3D12RaytracingSakuraScene::BuildAccelerationStructures()
     leavesGeometryDesc.Triangles.VertexCount = static_cast<UINT>(m_leavesVertexBuffer.resource->GetDesc().Width) / sizeof(Vertex);
     leavesGeometryDesc.Triangles.VertexBuffer.StartAddress = m_leavesVertexBuffer.resource->GetGPUVirtualAddress();
     leavesGeometryDesc.Triangles.VertexBuffer.StrideInBytes = sizeof(Vertex);
-
-    // Mark the geometry as opaque. 
-    // PERFORMANCE TIP: mark geometry as opaque whenever applicable as it can enable important ray processing optimizations.
-    // Note: When rays encounter opaque geometry an any hit shader will not be executed whether it is present or not.
-    leavesGeometryDesc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_NONE;
+    leavesGeometryDesc.Flags = D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
 
     // Get required sizes for an acceleration structure.
     D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS buildFlags = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
@@ -864,12 +853,12 @@ void D3D12RaytracingSakuraScene::BuildAccelerationStructures()
     cubeBLASInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
     cubeBLASInputs.pGeometryDescs = &cubeGeometryDesc;
 
-    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS complexBLASInputs = {};
-    complexBLASInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
-    complexBLASInputs.Flags = buildFlags;
-    complexBLASInputs.NumDescs = 1; // 1 geometry desc
-    complexBLASInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
-    complexBLASInputs.pGeometryDescs = &complexGeometryDesc;
+    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS trunkBLASInputs = {};
+    trunkBLASInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+    trunkBLASInputs.Flags = buildFlags;
+    trunkBLASInputs.NumDescs = 1; // 1 geometry desc
+    trunkBLASInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
+    trunkBLASInputs.pGeometryDescs = &trunkGeometryDesc;
 
     D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS leavesBLASInputs = {};
     leavesBLASInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
@@ -879,18 +868,18 @@ void D3D12RaytracingSakuraScene::BuildAccelerationStructures()
     leavesBLASInputs.pGeometryDescs = &leavesGeometryDesc;
 
     D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO cubeBLASPrebuildInfo = {};
+    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO trunkBLASPrebuildInfo = {};
     D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO leavesBLASPrebuildInfo = {};
-    D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO complexBLASPrebuildInfo = {};
 
     m_dxrDevice->GetRaytracingAccelerationStructurePrebuildInfo(&cubeBLASInputs, &cubeBLASPrebuildInfo);
-    m_dxrDevice->GetRaytracingAccelerationStructurePrebuildInfo(&complexBLASInputs, &complexBLASPrebuildInfo);
+    m_dxrDevice->GetRaytracingAccelerationStructurePrebuildInfo(&trunkBLASInputs, &trunkBLASPrebuildInfo);
     m_dxrDevice->GetRaytracingAccelerationStructurePrebuildInfo(&leavesBLASInputs, &leavesBLASPrebuildInfo);
 
     // Tp-level acceleration structure - 3 instances (two cubes, one trunk).
     D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS topLevelInputs = {};
     topLevelInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
     topLevelInputs.Flags = buildFlags;
-    topLevelInputs.NumDescs = 1323;
+    topLevelInputs.NumDescs = 1764;
     topLevelInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
 
     D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO topLevelPrebuildInfo = {};
@@ -898,13 +887,13 @@ void D3D12RaytracingSakuraScene::BuildAccelerationStructures()
     ThrowIfFalse(topLevelPrebuildInfo.ResultDataMaxSizeInBytes > 0);
 
     ComPtr<ID3D12Resource> scratchResource;
-    SIZE_T maxFirst = max(
-        complexBLASPrebuildInfo.ScratchDataSizeInBytes,
-        topLevelPrebuildInfo.ScratchDataSizeInBytes
+    SIZE_T scratchSize = max(
+        leavesBLASPrebuildInfo.ScratchDataSizeInBytes,
+        max(
+            cubeBLASPrebuildInfo.ScratchDataSizeInBytes,
+            max(trunkBLASPrebuildInfo.ScratchDataSizeInBytes, topLevelPrebuildInfo.ScratchDataSizeInBytes)
+        )
     );
-
-    SIZE_T scratchSize = max(leavesBLASPrebuildInfo.ScratchDataSizeInBytes, max(cubeBLASPrebuildInfo.ScratchDataSizeInBytes, maxFirst));
-
 
     AllocateUAVBuffer(device, scratchSize, &scratchResource, D3D12_RESOURCE_STATE_COMMON, L"ScratchResource");
 
@@ -919,7 +908,7 @@ void D3D12RaytracingSakuraScene::BuildAccelerationStructures()
         D3D12_RESOURCE_STATES initialResourceState = D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE;
 
         AllocateUAVBuffer(device, cubeBLASPrebuildInfo.ResultDataMaxSizeInBytes, &m_bottomLevelAccelerationStructureCube, initialResourceState, L"BottomLevelAccelerationStructureCube");
-        AllocateUAVBuffer(device, complexBLASPrebuildInfo.ResultDataMaxSizeInBytes, &m_bottomLevelAccelerationStructureTrunk, initialResourceState, L"BottomLevelAccelerationStructureComplex");
+        AllocateUAVBuffer(device, trunkBLASPrebuildInfo.ResultDataMaxSizeInBytes, &m_bottomLevelAccelerationStructureTrunk, initialResourceState, L"BottomLevelAccelerationStructureTrunk");
         AllocateUAVBuffer(device, leavesBLASPrebuildInfo.ResultDataMaxSizeInBytes, &m_bottomLevelAccelerationStructureLeaves, initialResourceState, L"BottomLevelAccelerationStructureLeaves");
         AllocateUAVBuffer(device, topLevelPrebuildInfo.ResultDataMaxSizeInBytes, &m_topLevelAccelerationStructure, initialResourceState, L"TopLevelAccelerationStructure");
     }
@@ -927,20 +916,18 @@ void D3D12RaytracingSakuraScene::BuildAccelerationStructures()
     // Create an instance desc for the bottom-level acceleration structure.
     ComPtr<ID3D12Resource> instanceDescsResource;
     std::vector<D3D12_RAYTRACING_INSTANCE_DESC> instanceDesc;
-    int cubesPerRow = 20;     // Cubes per row along X and Z axes
-    float cubeSpacing = 4.2f; // Spacing between cubes
+    int objectsPerRow = 20; //Object per row along Z and X axis
+    float largerCubeSpacing = 2.0f; // Spacing between larger cubes
+	float randomCubeSpacing = 1.0f; // Spacing between random smaller cubes
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<float> randomOffset(-5.0f, 5.0f);
 
-    // === Larger Cubes ===
-    int largerCubesPerRow = 14; // Adjust to fit 200 cubes
-    float largerCubeSpacing = 1.0f; // Spacing between larger cubes
-    int largerCubeCount = 0;
-
-    for (int x = -largerCubesPerRow / 2; x <= largerCubesPerRow / 2; ++x)
+    // Larger cubes for the floor
+    for (int x = -objectsPerRow / 2; x <= objectsPerRow / 2; ++x)
     {
-        for (int z = -largerCubesPerRow / 2; z <= largerCubesPerRow / 2; ++z)
+        for (int z = -objectsPerRow / 2; z <= objectsPerRow / 2; ++z)
         {
-            if (largerCubeCount >= 200) break;
-
             D3D12_RAYTRACING_INSTANCE_DESC desc = {};
             float scale = 2.0f; // Larger cube scale
             desc.Transform[0][0] = scale; // Scale X
@@ -957,51 +944,44 @@ void D3D12RaytracingSakuraScene::BuildAccelerationStructures()
             desc.InstanceID = instanceDesc.size();
             desc.InstanceContributionToHitGroupIndex = static_cast<UINT>(instanceDesc.size());
             instanceDesc.push_back(desc);
-
-            ++largerCubeCount;
         }
     }
 
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<float> randomOffset(-5.0f, 5.0f); // Adjust range as needed
-    
-
-    // === Smaller Cubes ===
-    int smallerCubeCount = 0;
-    float smallerCubeScale = 0.3f; // Smaller cube scale
-    float smallerCubeYOffset = 2.0f; // Offset above larger cubes
-
-    for (int i = 0; i < 241; ++i)
+	// Smaller transparent cubes that are placed randomly on the floor
+    for (int x = -objectsPerRow / 2; x <= objectsPerRow / 2; ++x)
     {
-        float randomZOffset = randomOffset(gen);
-        D3D12_RAYTRACING_INSTANCE_DESC desc = {};
-        desc.Transform[0][0] = smallerCubeScale; // Scale X
-        desc.Transform[1][1] = smallerCubeScale; // Scale Y
-        desc.Transform[2][2] = smallerCubeScale; // Scale Z
+        for (int z = -objectsPerRow / 2; z <= objectsPerRow / 2; ++z)
+        {
+            float randomZOffset = randomOffset(gen); // Random Z offset for the smaller cubes
 
-        // Position the smaller cubes directly above the larger cubes
-        desc.Transform[0][3] = instanceDesc[i % 200].Transform[0][3]; // Match X position
-        desc.Transform[1][3] = instanceDesc[i % 200].Transform[1][3] + smallerCubeYOffset; // Offset Y position
-		desc.Transform[2][3] = instanceDesc[i % 200].Transform[2][3] + randomZOffset; // Random Z position
+            D3D12_RAYTRACING_INSTANCE_DESC desc = {};
+            float scale = 0.3f; // Smaller cube scale
+            desc.Transform[0][0] = scale; // Scale X
+            desc.Transform[1][1] = scale; // Scale Y
+            desc.Transform[2][2] = scale; // Scale Z
 
-        desc.InstanceMask = 1;
-        desc.AccelerationStructure = m_bottomLevelAccelerationStructureCube->GetGPUVirtualAddress();
-        desc.InstanceID = instanceDesc.size();
-        desc.InstanceContributionToHitGroupIndex = static_cast<UINT>(instanceDesc.size());
-        instanceDesc.push_back(desc);
+            // Position the smaller cubes in the XZ plane
+            desc.Transform[0][3] = x * randomCubeSpacing; // Position along X axis
+            desc.Transform[1][3] = 2.0f;                 // Y remains at 0
+            desc.Transform[2][3] = z * randomCubeSpacing + randomZOffset;// Position along Z axis
 
-        ++smallerCubeCount;
+            desc.InstanceMask = 1;
+            desc.AccelerationStructure = m_bottomLevelAccelerationStructureCube->GetGPUVirtualAddress();
+            desc.InstanceID = instanceDesc.size();
+            desc.InstanceContributionToHitGroupIndex = static_cast<UINT>(instanceDesc.size());
+            instanceDesc.push_back(desc);
+        }
     }
 
-    float complexShapeSpacing = 2.0f;
 
+	// Trunk and leaves
+    float trunkShapeSpacing = 2.0f;
     // Store random positions for trunks
     std::vector<std::tuple<float, float, float>> trunkPositions;
 
     // First loop: Initialize trunks
-    for (int x = -cubesPerRow / 2; x <= cubesPerRow / 2; ++x) {
-        for (int z = -cubesPerRow / 2; z <= cubesPerRow / 2; ++z) {
+    for (int x = -objectsPerRow / 2; x <= objectsPerRow / 2; ++x) {
+        for (int z = -objectsPerRow / 2; z <= objectsPerRow / 2; ++z) {
             // Generate random offsets for this position
             float randomXOffset = randomOffset(gen);
             float randomYOffset = 0;
@@ -1009,9 +989,9 @@ void D3D12RaytracingSakuraScene::BuildAccelerationStructures()
 
             // Store the random position for later use by leaves
             trunkPositions.emplace_back(
-                x * complexShapeSpacing + randomXOffset,
+                x * trunkShapeSpacing + randomXOffset,
                 2.0f + randomYOffset,
-                z * complexShapeSpacing + randomZOffset
+                z * trunkShapeSpacing + randomZOffset
             );
 
             // Trunk instance
@@ -1064,12 +1044,12 @@ void D3D12RaytracingSakuraScene::BuildAccelerationStructures()
     cubeBLASDesc.DestAccelerationStructureData = m_bottomLevelAccelerationStructureCube->GetGPUVirtualAddress();
 
     // Build bottom-level acceleration structures for trunk
-    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC complexBLASDesc = {};
-    complexBLASDesc.Inputs = complexBLASInputs;
-    complexBLASDesc.ScratchAccelerationStructureData = scratchResource->GetGPUVirtualAddress();
-    complexBLASDesc.DestAccelerationStructureData = m_bottomLevelAccelerationStructureTrunk->GetGPUVirtualAddress();
+    D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC trunkBLASDesc = {};
+    trunkBLASDesc.Inputs = trunkBLASInputs;
+    trunkBLASDesc.ScratchAccelerationStructureData = scratchResource->GetGPUVirtualAddress();
+    trunkBLASDesc.DestAccelerationStructureData = m_bottomLevelAccelerationStructureTrunk->GetGPUVirtualAddress();
 
-    // Build bottom-level acceleration structures for leaves shape
+    // Build bottom-level acceleration structures for leaves 
     D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC leavesBLASDesc = {};
     leavesBLASDesc.Inputs = leavesBLASInputs;
     leavesBLASDesc.ScratchAccelerationStructureData = scratchResource->GetGPUVirtualAddress();
@@ -1085,7 +1065,7 @@ void D3D12RaytracingSakuraScene::BuildAccelerationStructures()
         {
             raytracingCommandList->BuildRaytracingAccelerationStructure(&cubeBLASDesc, 0, nullptr);
             commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::UAV(m_bottomLevelAccelerationStructureCube.Get()));
-            raytracingCommandList->BuildRaytracingAccelerationStructure(&complexBLASDesc, 0, nullptr);
+            raytracingCommandList->BuildRaytracingAccelerationStructure(&trunkBLASDesc, 0, nullptr);
             commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::UAV(m_bottomLevelAccelerationStructureTrunk.Get()));
             raytracingCommandList->BuildRaytracingAccelerationStructure(&leavesBLASDesc, 0, nullptr);
             commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::UAV(m_bottomLevelAccelerationStructureLeaves.Get()));
@@ -1157,25 +1137,25 @@ void D3D12RaytracingSakuraScene::BuildShaderTables()
             ObjectConstantBuffer cb;
         };
 
-        UINT numShaderRecords = 2313;
+        UINT numShaderRecords = 1764;
         UINT shaderRecordSize = shaderIdentifierSize + sizeof(RootArguments);
         ShaderTable hitGroupShaderTable(device, numShaderRecords, shaderRecordSize, L"HitGroupShaderTable");
 
-		// Transparant cube shader records
-        for (int i = 0; i < 200; ++i) {
+		// Larger cube shader records
+        for (int i = 0; i < 441; ++i) {
             RootArguments argument;
             argument.cb = m_cubeCB;
-            argument.cb.albedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); // White color // 16 bytes (4 floats × 4 bytes)
+            argument.cb.albedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); // White color
             argument.cb.materialID = 0;
             hitGroupShaderTable.push_back(ShaderRecord(hitGroupShaderIdentifier, shaderIdentifierSize, &argument, sizeof(argument)));
         }
 
         // Transparant cube shader records
-        for (int i = 0; i < 241; ++i) {
+        for (int i = 0; i < 441; ++i) {
             RootArguments argument;
-            argument.cb = m_cubeCB;
-            argument.cb.albedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); // White color // 16 bytes (4 floats × 4 bytes)
-            argument.cb.materialID = 3;
+			argument.cb = m_transparentCubeCB;
+            argument.cb.albedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); // White color 
+            argument.cb.materialID = 1;
             hitGroupShaderTable.push_back(ShaderRecord(hitGroupShaderIdentifier, shaderIdentifierSize, &argument, sizeof(argument)));
         }
 
@@ -1183,8 +1163,8 @@ void D3D12RaytracingSakuraScene::BuildShaderTables()
         for (int i = 0; i < 441; ++i) {
             RootArguments argument;
             argument.cb = m_trunkCB;
-            argument.cb.albedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); // 16 bytes (4 floats × 4 bytes)
-            argument.cb.materialID = 1;
+            argument.cb.albedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); // 16 bytes 
+            argument.cb.materialID = 2;
             hitGroupShaderTable.push_back(ShaderRecord(hitGroupShaderIdentifier, shaderIdentifierSize, &argument, sizeof(argument)));
         }
 
@@ -1192,8 +1172,8 @@ void D3D12RaytracingSakuraScene::BuildShaderTables()
         for (int i = 0; i < 441; ++i) {
             RootArguments argument;
             argument.cb = m_leavesCB;
-            argument.cb.albedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); // 16 bytes (4 floats × 4 bytes)
-            argument.cb.materialID = 2;
+            argument.cb.albedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); // 16 bytes 
+            argument.cb.materialID = 3;
             hitGroupShaderTable.push_back(ShaderRecord(hitGroupShaderIdentifier, shaderIdentifierSize, &argument, sizeof(argument)));
         }
 
@@ -1299,7 +1279,7 @@ void D3D12RaytracingSakuraScene::DoRaytracing()
             // Since each shader table has only one shader record, the stride is same as the size.
             dispatchDesc->HitGroupTable.StartAddress = m_hitGroupShaderTable->GetGPUVirtualAddress();
             dispatchDesc->HitGroupTable.SizeInBytes = m_hitGroupShaderTable->GetDesc().Width;
-            dispatchDesc->HitGroupTable.StrideInBytes = m_hitGroupShaderTable->GetDesc().Width / 2313;
+            dispatchDesc->HitGroupTable.StrideInBytes = m_hitGroupShaderTable->GetDesc().Width / 1764;
             dispatchDesc->MissShaderTable.StartAddress = m_missShaderTable->GetGPUVirtualAddress();
             dispatchDesc->MissShaderTable.SizeInBytes = m_missShaderTable->GetDesc().Width;
             dispatchDesc->MissShaderTable.StrideInBytes = dispatchDesc->MissShaderTable.SizeInBytes;
@@ -1597,32 +1577,4 @@ UINT D3D12RaytracingSakuraScene::CreateBufferSRV(D3DBuffer* buffer, UINT numElem
     device->CreateShaderResourceView(buffer->resource.Get(), &srvDesc, buffer->cpuDescriptorHandle);
     buffer->gpuDescriptorHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_descriptorHeap->GetGPUDescriptorHandleForHeapStart(), descriptorIndex, m_descriptorSize);
     return descriptorIndex;
-}
-
-std::vector<UINT8> D3D12RaytracingSakuraScene::GenerateTextureData()
-{
-    const UINT rowPitch = TextureWidth * TexturePixelSize;
-    const UINT cellSize = 32; // size of each checker cell
-    const UINT textureSize = rowPitch * TextureHeight;
-
-    std::vector<UINT8> data(textureSize);
-    UINT8* pData = &data[0];
-
-    for (UINT y = 0; y < TextureHeight; y++)
-    {
-        for (UINT x = 0; x < TextureWidth; x++)
-        {
-            UINT pixelOffset = (y * rowPitch) + (x * TexturePixelSize);
-
-            // Determine if this pixel is in a white or black cell
-            bool isWhite = ((x / cellSize) % 2) == ((y / cellSize) % 2);
-
-            UINT8 color = isWhite ? 255 : 0;
-            pData[pixelOffset + 0] = color; // R
-            pData[pixelOffset + 1] = color; // G
-            pData[pixelOffset + 2] = color; // B
-            pData[pixelOffset + 3] = 255;   // A
-        }
-    }
-    return data;
 }
