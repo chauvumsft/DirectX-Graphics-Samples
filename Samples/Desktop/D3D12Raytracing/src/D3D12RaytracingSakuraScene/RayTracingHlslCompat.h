@@ -41,16 +41,10 @@ struct Vertex
 	XMFLOAT3 uv;
 };
 
-struct CubeConstantBuffer
-{
-    XMFLOAT4 albedo;
-    uint32_t materialID;
-};
-
 struct ObjectConstantBuffer
 {
-    uint32_t materialID;
     XMFLOAT4 albedo;
+    uint32_t materialID;
 };
 
 

@@ -31,7 +31,7 @@
 ;   struct g_cubeCB
 ;   {
 ;
-;       struct struct.CubeConstantBuffer
+;       struct struct.ObjectConstantBuffer
 ;       {
 ;
 ;           float4 albedo;                            ; Offset:    0
@@ -88,8 +88,8 @@ target triple = "dxil-ms-dx"
 %"class.StructuredBuffer<Vertex>" = type { %struct.Vertex }
 %struct.Vertex = type { <3 x float>, <3 x float> }
 %"class.RWTexture2D<vector<float, 4> >" = type { <4 x float> }
-%g_cubeCB = type { %struct.CubeConstantBuffer }
-%struct.CubeConstantBuffer = type { <4 x float>, i32 }
+%g_cubeCB = type { %struct.ObjectConstantBuffer }
+%struct.ObjectConstantBuffer = type { <4 x float>, i32 }
 
 @"\01?Scene@@3URaytracingAccelerationStructure@@A" = external constant %dx.types.Handle, align 4
 @"\01?RenderTarget@@3V?$RWTexture2D@V?$vector@M$03@@@@A" = external constant %dx.types.Handle, align 4

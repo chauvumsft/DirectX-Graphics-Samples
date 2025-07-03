@@ -104,9 +104,10 @@ private:
 
     // Raytracing scene
     SceneConstantBuffer m_sceneCB[FrameCount];
-    CubeConstantBuffer m_cubeCB;
-    CubeConstantBuffer m_secondCubeCB;
-    CubeConstantBuffer m_complexShapeCB;
+    ObjectConstantBuffer m_objectCB;
+    ObjectConstantBuffer m_cubeCB;
+    ObjectConstantBuffer m_trunkCB;
+    ObjectConstantBuffer m_leavesCB;
 
     // Asset loader
     ObjModelLoader m_ObjModelLoader;

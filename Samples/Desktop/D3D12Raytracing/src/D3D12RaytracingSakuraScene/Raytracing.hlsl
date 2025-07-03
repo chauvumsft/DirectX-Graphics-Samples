@@ -14,7 +14,7 @@
 #define RAYTRACING_HLSL
 #define HLSL
 // Constants for cube counts
-#define CUBE_INSTANCE_COUNT 8810
+#define CUBE_INSTANCE_COUNT 881
 #include "RaytracingHlslCompat.h"
 
 using namespace dx;
@@ -31,7 +31,7 @@ ByteAddressBuffer IndicesLeaves : register(t5, space0);
 StructuredBuffer<Vertex> VerticesLeaves : register(t6, space0);
 
 ConstantBuffer<SceneConstantBuffer> g_sceneCB : register(b0);
-ConstantBuffer<CubeConstantBuffer> g_cubeCB : register(b1);
+ConstantBuffer<ObjectConstantBuffer> g_cubeCB : register(b1);
     
 Texture2D<float4> TrunkTexture : register(t7, space0);
 SamplerState TrunkSampler : register(s0);
@@ -78,6 +78,7 @@ typedef BuiltInTriangleIntersectionAttributes MyAttributes;
 struct [raypayload] RayPayload
 {
     float4 color : write(caller, closesthit, miss) : read(caller);
+    uint recursionDepth : write(caller) : read(closesthit);
 };
    
 
@@ -136,6 +137,7 @@ void MyRaygenShader()
     RayPayload payload =
     {
         float4(0, 0, 0, 0),
+        0
     };
 
     // If toggled 'S', enable SER  
@@ -172,24 +174,74 @@ void MyRaygenShader()
     RenderTarget[DispatchRaysIndex().xy] = color;
 }
 
+// Fresnel reflectance - schlick approximation.
+float3 FresnelReflectanceSchlick(in float3 I, in float3 N, in float3 f0)
+{
+    float cosi = saturate(dot(-I, N));
+    return f0 + (1 - f0) * pow(1 - cosi, 5);
+}
     
+struct Ray
+{
+    float3 Origin;
+    float3 Direction;
+};
+    
+// Trace a radiance ray into the scene and returns a shaded color.
+float4 TraceRadianceRay(in Ray ray, in UINT currentRayRecursionDepth)
+{
+    if (currentRayRecursionDepth >= 3)
+    {
+        return float4(0, 0, 0, 0);
+    }
+
+// Set the ray's extents.
+    RayDesc rayDesc;
+    rayDesc.Origin = ray.Origin;
+    rayDesc.Direction = ray.Direction;
+    // Set TMin to a zero value to avoid aliasing artifacts along contact areas.
+    // Note: make sure to enable face culling so as to avoid surface face fighting.
+    rayDesc.TMin = 0.001;
+    rayDesc.TMax = 10000;
+    RayPayload rayPayload = { float4(0, 0, 0, 0), currentRayRecursionDepth + 1 };
+    TraceRay(Scene, RAY_FLAG_CULL_BACK_FACING_TRIANGLES, ~0, 0, 1, 0, rayDesc, rayPayload);
+
+    return rayPayload.color;
+}
+    
+
 [shader("closesthit")]
 void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
 {
-    bool isComplex = 882 >= InstanceID() >= CUBE_INSTANCE_COUNT;
-    bool isLeaves = InstanceID() >= CUBE_INSTANCE_COUNT * 2;
+// Fix instance ID ranges
+    bool isCube = (InstanceID() < CUBE_INSTANCE_COUNT);
+        bool isComplex = (InstanceID() >= CUBE_INSTANCE_COUNT) && (InstanceID() < CUBE_INSTANCE_COUNT + 442);
+        bool isLeaves = (InstanceID() >= CUBE_INSTANCE_COUNT * 2);
+    
     float3 hitPosition = HitWorldPosition();
 
-    // Get the base index of the triangle's first 16 bit index.
+// Get the base index of the triangle's first 16 bit index.
     uint indexSizeInBytes = 2;
     uint indicesPerTriangle = 3;
     uint triangleIndexStride = indicesPerTriangle * indexSizeInBytes;
     uint baseIndex = PrimitiveIndex() * triangleIndexStride;
     
-    // Load up 3 16 bit indices for the triangle.
-    uint3 indices = isComplex ? Load3x16BitIndices(PrimitiveIndex() * 3 * 2, IndicesComplex) : Load3x16BitIndices(PrimitiveIndex() * 3 * 2, IndicesCube);
+// Load up 3 16 bit indices for the triangle.
+    uint3 indices;
+    if (isComplex)
+    {
+        indices = Load3x16BitIndices(baseIndex, IndicesComplex);
+    }
+    else if (isLeaves)
+    {
+        indices = Load3x16BitIndices(baseIndex, IndicesLeaves);
+    }
+    else
+    {
+        indices = Load3x16BitIndices(baseIndex, IndicesCube);
+    }
         
-    // Retrieve corresponding vertex normals for the triangle vertices.
+// Retrieve corresponding vertex normals for the triangle vertices.
     float3 vertexNormals[3];
     if (isComplex)
     {
@@ -197,13 +249,12 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
         vertexNormals[1] = VerticesComplex[indices.y].normal;
         vertexNormals[2] = VerticesComplex[indices.z].normal;
     }
-
     else if (isLeaves)
     {
         vertexNormals[0] = VerticesLeaves[indices.x].normal;
         vertexNormals[1] = VerticesLeaves[indices.y].normal;
         vertexNormals[2] = VerticesLeaves[indices.z].normal;
-    } 
+    }
     else
     {
         vertexNormals[0] = VerticesCube[indices.x].normal;
@@ -211,66 +262,52 @@ void MyClosestHitShader(inout RayPayload payload, in MyAttributes attr)
         vertexNormals[2] = VerticesCube[indices.z].normal;
     }
 
-    // Compute the triangle's normal.
-    // This is redundant and done for illustration purposes 
-    // as all the per-vertex normals are the same and match triangle's normal in this sample. 
-    
-    // Albedo is defined per shape or material
-    float3 albedo = g_cubeCB.albedo; 
-    float4 sampled = float4(1.0, 1.0, 1.0, 1.0);
+// Compute the triangle's normal.
     float3 triangleNormal = HitAttribute(vertexNormals, attr);
-        
-        if (g_cubeCB.materialID == 1)
-        {
-            float2 baseUV = float2(
-            frac(hitPosition.x * 0.5 + 0.5),
-            frac(hitPosition.z * 0.5 + 0.5)
-            );
-
-            float3 tempColor = float3(0.0, 0.0, 0.0);
-
-            [unroll]
-            for (int i = 0; i < 1; ++i)
-            {
-                // Add a small offset to simulate variation in sampling
-                float offset = float(i) * 0.0005;
-                float2 uv = baseUV + float2(offset, offset);
-                tempColor += TrunkTexture.SampleLevel(TrunkSampler, uv, 0).rgb;
-            }
-
-                 // Average the result to keep brightness consistent
-            sampled.rgb = tempColor / 1.0;
-        }
-        else if (g_cubeCB.materialID == 2)
-        {
-            float2 baseUV = float2(
-            frac(hitPosition.x * 0.5 + 0.5),
-            frac(hitPosition.z * 0.5 + 0.5)
-            );
-
-            float3 tempColor = float3(0.0, 0.0, 0.0);
-
-            [unroll]
-            for (int i = 0; i < 1; ++i)
-            {
-                // Add a small offset to simulate variation in sampling
-                float offset = float(i) * 0.0005;
-                float2 uv = baseUV + float2(offset, offset);
-                tempColor += SakuraTexture.SampleLevel(SakuraSampler, uv, 0).rgb;
-            }
-
-                // Average the result to keep brightness consistent
-            sampled.rgb = tempColor / 1.0;
-        }
-        float3 baseColor = albedo * sampled.rgb;
-        float3 lightDir = normalize(g_sceneCB.lightPosition.xyz - hitPosition);
-        float NdotL = saturate(dot(triangleNormal, lightDir));
-        float3 finalColor = baseColor * g_sceneCB.lightDiffuseColor.rgb * NdotL;
-        payload.color = float4(finalColor, 1.0f);
-    }
-   
     
+// Albedo is defined per shape or material
+    float3 albedo = g_cubeCB.albedo;
+    float4 sampled = float4(1.0, 1.0, 1.0, 1.0);
+        
+    if (g_cubeCB.materialID == 1)
+    {
+        float2 baseUV = float2(
+        frac(hitPosition.x * 0.5 + 0.5),
+        frac(hitPosition.z * 0.5 + 0.5)
+    );
 
+        sampled.rgb = TrunkTexture.SampleLevel(TrunkSampler, baseUV, 0).rgb;
+    }
+    else if (g_cubeCB.materialID == 2)
+    {
+        float2 baseUV = float2(
+        frac(hitPosition.x * 0.5 + 0.5),
+        frac(hitPosition.z * 0.5 + 0.5)
+    );
+
+        sampled.rgb = SakuraTexture.SampleLevel(SakuraSampler, baseUV, 0).rgb;
+    }
+    else if (g_cubeCB.materialID == 3)
+    {
+        // Trace a reflection ray
+        Ray reflectionRay = { hitPosition + triangleNormal * 0.5f, reflect(WorldRayDirection(), triangleNormal) };
+        float4 reflectionColor = TraceRadianceRay(reflectionRay, payload.recursionDepth);
+
+        float3 fresnelR = FresnelReflectanceSchlick(WorldRayDirection(), triangleNormal, g_cubeCB.albedo.xyz);
+        float4 reflectedColor = 0.5 * float4(fresnelR, 1) * reflectionColor;
+
+        payload.color = reflectedColor;
+        return;
+    }
+    
+    float3 baseColor = albedo * sampled.rgb;
+    float3 lightDir = normalize(g_sceneCB.lightPosition.xyz - hitPosition);
+    float NdotL = saturate(dot(triangleNormal, lightDir));
+    float3 finalColor = baseColor * g_sceneCB.lightDiffuseColor.rgb * NdotL;
+    payload.color = float4(finalColor, g_cubeCB.albedo.w);
+}
+    
+ 
 [shader("miss")]
 void MyMissShader(inout RayPayload payload)
 {

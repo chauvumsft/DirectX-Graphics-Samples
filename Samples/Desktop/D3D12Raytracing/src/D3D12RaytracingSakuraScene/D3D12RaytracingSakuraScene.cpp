@@ -215,8 +215,8 @@ void D3D12RaytracingSakuraScene::InitializeScene()
     // Setup camera.
     {
         // Initialize the view and projection inverse matrices.
-        m_eye = { 0.0f, 5.0f, -14.0f, 1.0f };
-        m_at = { 0.0f, 0.0f, 0.0f, 1.0f };
+        m_eye = { 0.0f, 3.0f, -14.0f, 1.0f };
+        m_at = { 0.0f, 5.0f, 0.0f, 1.0f };
         XMVECTOR right = { 1.0f, 0.0f, 0.0f, 0.0f };
 
         XMVECTOR direction = XMVector4Normalize(m_at - m_eye);
@@ -237,13 +237,13 @@ void D3D12RaytracingSakuraScene::InitializeScene()
         XMFLOAT4 lightAmbientColor;
         XMFLOAT4 lightDiffuseColor;
 
-        lightPosition = XMFLOAT4(0.0f, 15.8f, -3.0f, 0.0f);
+        lightPosition = XMFLOAT4(0.0f, 15.8f, 233.0f, 0.0f);
         m_sceneCB[frameIndex].lightPosition = XMLoadFloat4(&lightPosition);
 
-        lightAmbientColor = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
+        lightAmbientColor = XMFLOAT4(0.8f, 0.8f, 0.8f, 1.0f); // Brighter ambient light
         m_sceneCB[frameIndex].lightAmbientColor = XMLoadFloat4(&lightAmbientColor);
 
-        lightDiffuseColor = XMFLOAT4(1.0f, 0.75f, 0.85f, 1.0f);
+        lightDiffuseColor = XMFLOAT4(1.2f, 1.0f, 1.0f, 1.0f); // Stronger diffuse light
         m_sceneCB[frameIndex].lightDiffuseColor = XMLoadFloat4(&lightDiffuseColor);
     }
 
@@ -511,7 +511,7 @@ void D3D12RaytracingSakuraScene::CreateRootSignatures()
     // This is a root signature that enables a shader to have unique arguments that come from shader tables.
     {
         CD3DX12_ROOT_PARAMETER rootParameters[LocalRootSignatureParams::Count];
-        rootParameters[LocalRootSignatureParams::CubeConstantSlot].InitAsConstants(SizeOfInUint32(m_cubeCB), 1);
+        rootParameters[LocalRootSignatureParams::CubeConstantSlot].InitAsConstants(SizeOfInUint32(m_objectCB), 1);
         CD3DX12_ROOT_SIGNATURE_DESC localRootSignatureDesc(ARRAYSIZE(rootParameters), rootParameters);
         localRootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_LOCAL_ROOT_SIGNATURE;
         SerializeAndCreateRaytracingRootSignature(localRootSignatureDesc, &m_raytracingLocalRootSignature);
@@ -593,7 +593,7 @@ void D3D12RaytracingSakuraScene::CreateRaytracingPipelineStateObject()
     // Shader config
    //  Defines the maximum sizes in bytes for the ray payload and attribute structure.
     auto shaderConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_SHADER_CONFIG_SUBOBJECT>();
-    UINT payloadSize = sizeof(XMFLOAT4);    // float4 color
+    UINT payloadSize = sizeof(XMFLOAT4) + sizeof(UINT);
     UINT attributeSize = sizeof(XMFLOAT2);  // float2 barycentrics
     shaderConfig->Config(payloadSize, attributeSize);
 
@@ -611,7 +611,7 @@ void D3D12RaytracingSakuraScene::CreateRaytracingPipelineStateObject()
     auto pipelineConfig = raytracingPipeline.CreateSubobject<CD3DX12_RAYTRACING_PIPELINE_CONFIG_SUBOBJECT>();
     // PERFOMANCE TIP: Set max recursion depth as low as needed 
     // as drivers may apply optimization strategies for low recursion depths.
-    UINT maxRecursionDepth = 1; // ~ primary rays only. 
+    UINT maxRecursionDepth = 4;// ~ primary rays only. 
     pipelineConfig->Config(maxRecursionDepth);
 
 #if _DEBUG
@@ -1073,9 +1073,9 @@ void D3D12RaytracingSakuraScene::BuildShaderTables()
     // Ray gen shader table
     {
         struct RootArguments {
-            CubeConstantBuffer cb;
+            ObjectConstantBuffer cb;
         } rootArguments;
-        rootArguments.cb = m_cubeCB;
+        rootArguments.cb = m_objectCB;
 
         UINT numShaderRecords = 1;
         UINT shaderRecordSize = shaderIdentifierSize + sizeof(rootArguments);
@@ -1096,33 +1096,35 @@ void D3D12RaytracingSakuraScene::BuildShaderTables()
     // Hit group shader table
     {
         struct RootArguments {
-            CubeConstantBuffer cb;
+            ObjectConstantBuffer cb;
         };
 
         UINT numShaderRecords = 2313;
         UINT shaderRecordSize = shaderIdentifierSize + sizeof(RootArguments);
         ShaderTable hitGroupShaderTable(device, numShaderRecords, shaderRecordSize, L"HitGroupShaderTable");
 
-
+		// Transparant cube shader records
         for (int i = 0; i < 441; ++i) {
             RootArguments argument;
             argument.cb = m_cubeCB;
-            argument.cb.albedo = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f); // 16 bytes (4 floats × 4 bytes)
-            argument.cb.materialID = 0;
+            argument.cb.albedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); // White color // 16 bytes (4 floats × 4 bytes)
+            argument.cb.materialID = 3;
             hitGroupShaderTable.push_back(ShaderRecord(hitGroupShaderIdentifier, shaderIdentifierSize, &argument, sizeof(argument)));
         }
 
+		// Tree trunk shader records
         for (int i = 0; i < 441; ++i) {
             RootArguments argument;
-            argument.cb = m_complexShapeCB;
+            argument.cb = m_trunkCB;
             argument.cb.albedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); // 16 bytes (4 floats × 4 bytes)
             argument.cb.materialID = 1;
             hitGroupShaderTable.push_back(ShaderRecord(hitGroupShaderIdentifier, shaderIdentifierSize, &argument, sizeof(argument)));
         }
 
+		// Tree leaves shader records
         for (int i = 0; i < 441; ++i) {
             RootArguments argument;
-            argument.cb = m_complexShapeCB;
+            argument.cb = m_leavesCB;
             argument.cb.albedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); // 16 bytes (4 floats × 4 bytes)
             argument.cb.materialID = 2;
             hitGroupShaderTable.push_back(ShaderRecord(hitGroupShaderIdentifier, shaderIdentifierSize, &argument, sizeof(argument)));
@@ -1206,14 +1208,14 @@ void D3D12RaytracingSakuraScene::OnUpdate()
         UpdateCameraMatrices();
     }
 
-    // Rotate the second light around Y axis.
-    {
-        float secondsToRotateAround = 8.0f;
-        float angleToRotateBy = -360.0f * (elapsedTime / secondsToRotateAround);
-        XMMATRIX rotate = XMMatrixRotationY(XMConvertToRadians(angleToRotateBy));
-        const XMVECTOR& prevLightPosition = m_sceneCB[prevFrameIndex].lightPosition;
-        m_sceneCB[frameIndex].lightPosition = XMVector3Transform(prevLightPosition, rotate);
-    }
+    //// Rotate the second light around Y axis.
+    //{
+    //    float secondsToRotateAround = 8.0f;
+    //    float angleToRotateBy = -360.0f * (elapsedTime / secondsToRotateAround);
+    //    XMMATRIX rotate = XMMatrixRotationY(XMConvertToRadians(angleToRotateBy));
+    //    const XMVECTOR& prevLightPosition = m_sceneCB[prevFrameIndex].lightPosition;
+    //    m_sceneCB[frameIndex].lightPosition = XMVector3Transform(prevLightPosition, rotate);
+    //}
     m_sceneCB[frameIndex].enableSER = m_serEnabled ? 1 : 0;
     m_sceneCB[frameIndex].enableSortByHit = m_sortByHit ? 1 : 0;
     m_sceneCB[frameIndex].enableSortByMaterial = m_sortByMaterial ? 1 : 0;
