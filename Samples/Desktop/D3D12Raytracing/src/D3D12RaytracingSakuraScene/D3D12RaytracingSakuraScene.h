@@ -131,7 +131,7 @@ private:
     // Acceleration structure
     ComPtr<ID3D12Resource> m_bottomLevelAccelerationStructure;
     ComPtr<ID3D12Resource> m_bottomLevelAccelerationStructureCube;
-    ComPtr<ID3D12Resource> m_bottomLevelAccelerationStructureComplex;
+    ComPtr<ID3D12Resource> m_bottomLevelAccelerationStructureTrunk;
     ComPtr<ID3D12Resource> m_bottomLevelAccelerationStructureLeaves;
 
     ComPtr<ID3D12Resource> m_topLevelAccelerationStructureComplex;
