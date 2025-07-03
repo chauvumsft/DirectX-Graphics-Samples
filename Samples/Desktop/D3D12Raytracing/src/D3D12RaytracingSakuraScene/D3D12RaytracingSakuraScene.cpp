@@ -215,7 +215,7 @@ void D3D12RaytracingSakuraScene::InitializeScene()
     // Setup camera.
     {
         // Initialize the view and projection inverse matrices.
-        m_eye = { 0.0f, 3.0f, -14.0f, 1.0f };
+        m_eye = { 0.0f, 3.0f, -12.0f, 1.0f };
         m_at = { 0.0f, 5.0f, 0.0f, 1.0f };
         XMVECTOR right = { 1.0f, 0.0f, 0.0f, 0.0f };
 
@@ -931,7 +931,7 @@ void D3D12RaytracingSakuraScene::BuildAccelerationStructures()
 
     // === Larger Cubes ===
     int largerCubesPerRow = 14; // Adjust to fit 200 cubes
-    float largerCubeSpacing = 2.0f; // Spacing between larger cubes
+    float largerCubeSpacing = 1.0f; // Spacing between larger cubes
     int largerCubeCount = 0;
 
     for (int x = -largerCubesPerRow / 2; x <= largerCubesPerRow / 2; ++x)
