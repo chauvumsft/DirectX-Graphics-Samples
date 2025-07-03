@@ -929,27 +929,62 @@ void D3D12RaytracingSakuraScene::BuildAccelerationStructures()
     int cubesPerRow = 20;     // Cubes per row along X and Z axes
     float cubeSpacing = 4.2f; // Spacing between cubes
 
-    // Loop through each position in the XZ plane to create cubes and complex shapes.
-    for (int x = -cubesPerRow / 2; x <= cubesPerRow / 2; ++x) {
-        for (int z = -cubesPerRow / 2; z <= cubesPerRow / 2; ++z) {
+    // === Larger Cubes ===
+    int largerCubesPerRow = 14; // Adjust to fit 200 cubes
+    float largerCubeSpacing = 2.0f; // Spacing between larger cubes
+    int largerCubeCount = 0;
+
+    for (int x = -largerCubesPerRow / 2; x <= largerCubesPerRow / 2; ++x)
+    {
+        for (int z = -largerCubesPerRow / 2; z <= largerCubesPerRow / 2; ++z)
+        {
+            if (largerCubeCount >= 200) break;
+
             D3D12_RAYTRACING_INSTANCE_DESC desc = {};
-            float scale = 2.0f; 
+            float scale = 2.0f; // Larger cube scale
             desc.Transform[0][0] = scale; // Scale X
             desc.Transform[1][1] = scale; // Scale Y
             desc.Transform[2][2] = scale; // Scale Z
 
-
-            // Position the cubes in the XZ plane, Y remains 0 (flat around 0, 0, 0)
-            desc.Transform[0][3] = x * cubeSpacing; // Position along X axis
-            desc.Transform[1][3] = 0.0f;           // Y remains at 0 for all cubes (on the ground)
-            desc.Transform[2][3] = z * cubeSpacing; // Position along Z axis
+            // Position the larger cubes in the XZ plane
+            desc.Transform[0][3] = x * largerCubeSpacing; // Position along X axis
+            desc.Transform[1][3] = 0.0f;                 // Y remains at 0
+            desc.Transform[2][3] = z * largerCubeSpacing; // Position along Z axis
 
             desc.InstanceMask = 1;
             desc.AccelerationStructure = m_bottomLevelAccelerationStructureCube->GetGPUVirtualAddress();
-            desc.InstanceID = instanceDesc.size(); 
+            desc.InstanceID = instanceDesc.size();
             desc.InstanceContributionToHitGroupIndex = static_cast<UINT>(instanceDesc.size());
             instanceDesc.push_back(desc);
+
+            ++largerCubeCount;
         }
+    }
+
+    // === Smaller Cubes ===
+    int smallerCubeCount = 0;
+    float smallerCubeScale = 0.3f; // Smaller cube scale
+    float smallerCubeYOffset = 3.0f; // Offset above larger cubes
+
+    for (int i = 0; i < 241; ++i)
+    {
+        D3D12_RAYTRACING_INSTANCE_DESC desc = {};
+        desc.Transform[0][0] = smallerCubeScale; // Scale X
+        desc.Transform[1][1] = smallerCubeScale; // Scale Y
+        desc.Transform[2][2] = smallerCubeScale; // Scale Z
+
+        // Position the smaller cubes directly above the larger cubes
+        desc.Transform[0][3] = instanceDesc[i % 200].Transform[0][3]; // Match X position
+        desc.Transform[1][3] = instanceDesc[i % 200].Transform[1][3] + smallerCubeYOffset; // Offset Y position
+        desc.Transform[2][3] = instanceDesc[i % 200].Transform[2][3]; // Match Z position
+
+        desc.InstanceMask = 1;
+        desc.AccelerationStructure = m_bottomLevelAccelerationStructureCube->GetGPUVirtualAddress();
+        desc.InstanceID = instanceDesc.size();
+        desc.InstanceContributionToHitGroupIndex = static_cast<UINT>(instanceDesc.size());
+        instanceDesc.push_back(desc);
+
+        ++smallerCubeCount;
     }
 
 
@@ -1104,7 +1139,16 @@ void D3D12RaytracingSakuraScene::BuildShaderTables()
         ShaderTable hitGroupShaderTable(device, numShaderRecords, shaderRecordSize, L"HitGroupShaderTable");
 
 		// Transparant cube shader records
-        for (int i = 0; i < 441; ++i) {
+        for (int i = 0; i < 200; ++i) {
+            RootArguments argument;
+            argument.cb = m_cubeCB;
+            argument.cb.albedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); // White color // 16 bytes (4 floats × 4 bytes)
+            argument.cb.materialID = 0;
+            hitGroupShaderTable.push_back(ShaderRecord(hitGroupShaderIdentifier, shaderIdentifierSize, &argument, sizeof(argument)));
+        }
+
+        // Transparant cube shader records
+        for (int i = 0; i < 241; ++i) {
             RootArguments argument;
             argument.cb = m_cubeCB;
             argument.cb.albedo = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f); // White color // 16 bytes (4 floats × 4 bytes)
@@ -1199,7 +1243,7 @@ void D3D12RaytracingSakuraScene::OnUpdate()
 
     // Rotate the camera around Y axis.
     {
-        float secondsToRotateAround = 30.0f;
+        float secondsToRotateAround = 52.0f;
         float angleToRotateBy = 360.0f * (elapsedTime / secondsToRotateAround);
         XMMATRIX rotate = XMMatrixRotationY(XMConvertToRadians(angleToRotateBy));
         m_eye = XMVector3Transform(m_eye, rotate);
